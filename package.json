@@ -1,0 +1,31 @@
+{
+  "name": "rx-asteroids",
+  "version": "1.0.0",
+  "description": "asteroids variant with reactive streams (RxJS)",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mercantilism/rxAsteroids.git"
+  },
+  "keywords": [
+    "rxjs",
+    "games",
+    "Observables"
+  ],
+  "author": "mercantilism",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mercantilism/rxAsteroids/issues"
+  },
+  "homepage": "https://github.com/mercantilism/rxAsteroids#readme",
+  "devDependencies": {
+    "webpack": "^3.6.0"
+  },
+  "dependencies": {
+    "rxjs": "^5.4.3"
+  }
+}
