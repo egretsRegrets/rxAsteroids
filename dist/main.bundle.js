@@ -75,8 +75,51 @@ var _Observable = __webpack_require__(74);
 
 __webpack_require__(89);
 
+var _utils = __webpack_require__(73);
+
+// create, append canvas
+var canvas = void 0,
+    ctx = void 0;
+// same-dir imports
 // RxJS imports
+
+(0, _utils.generateCanvas)(canvas, ctx);
+// on resize recreate canvas
+var resize$ = _Observable.Observable.fromEvent(window, 'resize');
+resize$.forEach(function () {
+  return (0, _utils.generateCanvas)(canvas, ctx);
+});
+// keydown source stream
 var keydown$ = _Observable.Observable.fromEvent(document, 'keydown');
+
+/***/ }),
+
+/***/ 73:
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.generateAsteroid = generateAsteroid;
+exports.generateCanvas = generateCanvas;
+
+var _canvas = __webpack_require__(92);
+
+function generateAsteroid() {
+    console.log('utils test');
+}
+function generateCanvas(canvas, ctx) {
+    if (document.getElementById("asteroids_canvas")) {
+        document.getElementById("asteroids_canvas").remove();
+    }
+    canvas = (0, _canvas.createCanvasElement)();
+    ctx = canvas.getContext('2d');
+    canvas.setAttribute("id", "asteroids_canvas");
+    document.body.appendChild(canvas);
+}
 
 /***/ }),
 
@@ -1204,6 +1247,33 @@ var FromEventObservable = (function (_super) {
 }(Observable_1.Observable));
 exports.FromEventObservable = FromEventObservable;
 //# sourceMappingURL=FromEventObservable.js.map
+
+/***/ }),
+
+/***/ 92:
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.createCanvasElement = createCanvasElement;
+var canvasBasis = {};
+function createCanvasElement() {
+    defineCanvasBasis();
+    var canvas = document.createElement('canvas');
+    canvas.width = canvasBasis.canvasWidth;
+    canvas.height = canvasBasis.canvasHeight;
+    return canvas;
+}
+function defineCanvasBasis() {
+    canvasBasis.canvasWidth = window.innerWidth;
+    canvasBasis.canvasHeight = window.innerHeight;
+    canvasBasis.cols = Math.floor(canvasBasis.canvasWidth / canvasBasis.cellSize);
+    canvasBasis.rows = Math.floor(canvasBasis.canvasHeight / canvasBasis.cellSize);
+}
 
 /***/ })
 
