@@ -1,35 +1,42 @@
 
-import { CanvasBasis } from './interfaces';
+import { Ship, Point2d } from './interfaces';
+import { THRUST_SPD, SHIP_VERT } from './consts';
 
-let canvasBasis: CanvasBasis = <CanvasBasis>{};
+let posX = window.innerWidth / 2;
+let posY = window.innerHeight / 2;
 
-export function createCanvasElement() {
-    defineCanvasBasis();
-    const canvas = document.createElement('canvas');
-    canvas.width = canvasBasis.canvasWidth;
-    canvas.height = canvasBasis.canvasHeight;
-    return canvas;
+export function renderScene(canvas, ctx, scene) {
+    renderBackground(canvas, ctx);
+    renderShip(ctx, scene.ship);
 }
 
-export function renderScene(canvas, scene) {
-    renderBackground(canvas.ctx);
-    renderShip(scene);
+function renderShip(ctx, ship: Ship) {
+
+    let canvas = <HTMLCanvasElement>document.getElementById('asteroids_canvas');
+    let con = canvas.getContext("2d");
+    let angle = ship.rotation;
+    // defining ship triangle
+    con.save();
+    con.translate(ship.center.x, ship.center.y);
+    con.rotate(angle);
+    con.strokeStyle = '#EEE';
+    // pre-drawing positioning
+    con.beginPath();
+    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
+    con.moveTo(SHIP_VERT[0][0], SHIP_VERT[0][1]);
+    // begin drawing
+    con.lineTo(SHIP_VERT[1][0], SHIP_VERT[1][1]);
+    con.lineTo(SHIP_VERT[2][0], SHIP_VERT[2][1]);
+    con.closePath();
+    con.stroke();
+    con.restore();
+
 }
 
-function defineCanvasBasis() {
-    canvasBasis.canvasWidth = window.innerWidth;
-    canvasBasis.canvasHeight = window.innerHeight;
-    canvasBasis.cols = Math.floor(canvasBasis.canvasWidth / canvasBasis.cellSize);
-    canvasBasis.rows = Math.floor(canvasBasis.canvasHeight / canvasBasis.cellSize);
-}
-
-function renderShip(ship) {
-    
-}
-
-function renderBackground(ctx) {
+function renderBackground(canvas: HTMLCanvasElement, ctx) {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvasBasis.canvasWidth, canvasBasis.canvasHeight);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
 }
 
 /*
@@ -37,8 +44,7 @@ var can = document.getElementById("canvas"),
     con = can.getContext("2d"),
     pos = { x:can.width/2, y:can.height/2 },
     v = [[0,-10],[-10,0],[10,0]],
-    angle = 0,
-    angleRad = angle * (Math.PI/180);
+    angle = 0;
 
 setInterval(function(){
     con.save();

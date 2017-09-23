@@ -8,17 +8,13 @@ export interface Controls {
     [key: number]: string;
 }
 
-export interface CanvasBasis {
-    canvasWidth: number;
-    canvasHeight: number;
-    cols: number;
-    rows: number;
-    gapSize: 1;
-    cellSize: 10;
+export interface ShipPosition {
+    center: Point2d;
+    rotation: number;
 }
 
-export interface Ship {
+export interface Ship{
     rotation: number;
-    thrust: number;
+    center: Point2d;
     fire: boolean;
 }

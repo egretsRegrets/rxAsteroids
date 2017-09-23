@@ -1,17 +1,6 @@
 
-import { Ship } from './interfaces';
-import { createCanvasElement } from './canvas';
-
-export function generateCanvas() {
-    if(document.getElementById("asteroids_canvas")){
-        document.getElementById("asteroids_canvas").remove();
-    } 
-    let canvas = createCanvasElement();
-    let ctx = canvas.getContext('2d');
-    canvas.setAttribute("id", "asteroids_canvas");
-    document.body.appendChild(canvas);
-    return {canvas, ctx};
-}
+import { ShipPosition, Ship, Point2d } from './interfaces';
+import { THRUST_SPD } from './consts';
 
 export function rotateShip(angle, rotation) {
     return rotation === 'rotate-left'
@@ -20,6 +9,15 @@ export function rotateShip(angle, rotation) {
 }
 
 export function resolveThrust(thrust, accel) {
-    thrust ++;
-    return thrust;
+    return THRUST_SPD;
+}
+
+export function transformShipCenter (position: ShipPosition, movement): ShipPosition {
+    return {
+        center: {
+            x: position.center.x += movement.shipThrust * Math.sin(movement.shipRotation),
+            y: position.center.y += -movement.shipThrust * Math.cos(movement.shipRotation)
+        },
+        rotation: movement.shipRotation
+    };
 }

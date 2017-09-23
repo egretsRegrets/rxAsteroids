@@ -1931,38 +1931,47 @@ exports.AnonymousSubject = AnonymousSubject;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.createCanvasElement = createCanvasElement;
 exports.renderScene = renderScene;
-var canvasBasis = {};
-function createCanvasElement() {
-    defineCanvasBasis();
-    var canvas = document.createElement('canvas');
-    canvas.width = canvasBasis.canvasWidth;
-    canvas.height = canvasBasis.canvasHeight;
-    return canvas;
+
+var _consts = __webpack_require__(76);
+
+var posX = window.innerWidth / 2;
+var posY = window.innerHeight / 2;
+function renderScene(canvas, ctx, scene) {
+    renderBackground(canvas, ctx);
+    renderShip(ctx, scene.ship);
 }
-function renderScene(canvas, scene) {
-    renderBackground(canvas.ctx);
-    renderShip(scene);
+function renderShip(ctx, ship) {
+    var canvas = document.getElementById('asteroids_canvas');
+    var con = canvas.getContext("2d");
+    var angle = ship.rotation;
+    // defining ship triangle
+    con.save();
+    con.translate(ship.center.x, ship.center.y);
+    con.rotate(angle);
+    con.strokeStyle = '#EEE';
+    // pre-drawing positioning
+    con.beginPath();
+    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
+    con.moveTo(_consts.SHIP_VERT[0][0], _consts.SHIP_VERT[0][1]);
+    // begin drawing
+    con.lineTo(_consts.SHIP_VERT[1][0], _consts.SHIP_VERT[1][1]);
+    con.lineTo(_consts.SHIP_VERT[2][0], _consts.SHIP_VERT[2][1]);
+    con.closePath();
+    con.stroke();
+    con.restore();
 }
-function defineCanvasBasis() {
-    canvasBasis.canvasWidth = window.innerWidth;
-    canvasBasis.canvasHeight = window.innerHeight;
-    canvasBasis.cols = Math.floor(canvasBasis.canvasWidth / canvasBasis.cellSize);
-    canvasBasis.rows = Math.floor(canvasBasis.canvasHeight / canvasBasis.cellSize);
-}
-function renderShip(ship) {}
-function renderBackground(ctx) {
+function renderBackground(canvas, ctx) {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvasBasis.canvasWidth, canvasBasis.canvasHeight);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
 }
 /*
 var can = document.getElementById("canvas"),
     con = can.getContext("2d"),
     pos = { x:can.width/2, y:can.height/2 },
     v = [[0,-10],[-10,0],[10,0]],
-    angle = 0,
-    angleRad = angle * (Math.PI/180);
+    angle = 0;
 
 setInterval(function(){
     con.save();
@@ -2045,20 +2054,21 @@ var _canvas = __webpack_require__(25);
 var _consts = __webpack_require__(76);
 
 // create, append canvas
-//let canvasObj = generateCanvas();
-// on resize recreate canvas
-var resize$ = _Observable.Observable.fromEvent(window, 'resize').forEach(function () {
-    return (0, _utils.generateCanvas)();
-});
+var canvas = document.createElement('canvas');
+// same-dir imports
+// RxJS imports
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+var ctx = canvas.getContext('2d');
+canvas.setAttribute("id", "asteroids_canvas");
+document.body.appendChild(canvas);
 /**
  * we want to be able to have a ticks to throttle
  * user actions on ship.
  * test for right speed
  */
-
-// same-dir imports
-// RxJS imports
-var shipTicks$ = _Observable.Observable.interval(1000 / (_consts.FPS / 2), _animationFrame.animationFrame);
+var shipTicks$ = _Observable.Observable.interval(1000 / (_consts.FPS / 1.5), _animationFrame.animationFrame);
 // keydown source stream
 var keydown$ = _Observable.Observable.fromEvent(document, 'keydown');
 // pipeline - user input to ship model 
@@ -2082,6 +2092,21 @@ var shipThrust$ = pilotInput$.filter(function (input) {
     return input === 'thrust';
 }).scan(_utils.resolveThrust, 0).startWith(0);
 /**
+ * keep track of center of ship
+ * drawing context, eventually to be acted
+ * on by shipThrust
+ * REMEMBER WE NEED ACCESS TO shipRotation$
+ */
+var shipPos$ = shipThrust$.combineLatest(shipRotation$, function (shipThrust, shipRotation) {
+    return { shipThrust: shipThrust, shipRotation: shipRotation };
+}).scan(_utils.transformShipCenter, {
+    center: {
+        x: canvas.width / 2,
+        y: canvas.height / 2
+    },
+    rotation: 0
+});
+/**
  * ship.fire should only be true when space is depressed,
  * otherwise, ship.fire should be false
  */
@@ -2095,8 +2120,12 @@ var shipFire$ = pilotInput$.filter(function (input) {
  * ship model when one of it's properties is changed,
  * that is - anytime it fires, experiences a change in rotation or thrust
  */
-var ship$ = shipTicks$.combineLatest(shipRotation$, shipThrust$, shipFire$, function (_, rotation, thrust, fire) {
-    return { rotation: rotation, thrust: thrust, fire: fire };
+var ship$ = shipTicks$.combineLatest(shipPos$, shipFire$, function (_, shipPos, shipFire) {
+    return {
+        rotation: shipPos.rotation,
+        center: shipPos.center,
+        fire: shipFire
+    };
 });
 /**
  * scene observable to combine all of the observables
@@ -2107,9 +2136,19 @@ var scene$ = ship$.merge();
  * game observable to project to
  * rendering function at fps interval
  */
-var game$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).withLatestFrom(scene$).subscribe({
+var game$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).withLatestFrom(scene$, function (_, scene) {
+    return scene;
+}).map(function (scene) {
+    return {
+        ship: {
+            rotation: scene.rotation,
+            center: scene.center,
+            fire: scene.fire
+        }
+    };
+}).subscribe({
     next: function next(scene) {
-        return (0, _canvas.renderScene)((0, _utils.generateCanvas)(), scene);
+        return (0, _canvas.renderScene)(canvas, ctx, scene);
     }
 });
 
@@ -5191,28 +5230,26 @@ var WithLatestFromSubscriber = (function (_super) {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.generateCanvas = generateCanvas;
 exports.rotateShip = rotateShip;
 exports.resolveThrust = resolveThrust;
+exports.transformShipCenter = transformShipCenter;
 
-var _canvas = __webpack_require__(25);
+var _consts = __webpack_require__(76);
 
-function generateCanvas() {
-    if (document.getElementById("asteroids_canvas")) {
-        document.getElementById("asteroids_canvas").remove();
-    }
-    var canvas = (0, _canvas.createCanvasElement)();
-    var ctx = canvas.getContext('2d');
-    canvas.setAttribute("id", "asteroids_canvas");
-    document.body.appendChild(canvas);
-    return { canvas: canvas, ctx: ctx };
-}
 function rotateShip(angle, rotation) {
     return rotation === 'rotate-left' ? angle -= Math.PI / 3 / 10 : angle += Math.PI / 3 / 10;
 }
 function resolveThrust(thrust, accel) {
-    thrust++;
-    return thrust;
+    return _consts.THRUST_SPD;
+}
+function transformShipCenter(position, movement) {
+    return {
+        center: {
+            x: position.center.x += movement.shipThrust * Math.sin(movement.shipRotation),
+            y: position.center.y += -movement.shipThrust * Math.cos(movement.shipRotation)
+        },
+        rotation: movement.shipRotation
+    };
 }
 
 /***/ }),
@@ -5232,6 +5269,18 @@ var CONTROLS = exports.CONTROLS = {
     39: 'rotate-right',
     32: 'fire'
 };
+var THRUST_SPD = exports.THRUST_SPD = 5;
+/**
+ * 2d collection defines vertices of ship,
+ * will be offset from pos.x && pos.y in renderShip()
+ */
+var SHIP_VERT = exports.SHIP_VERT = [
+// north v
+[0, -10],
+// west v
+[-10, 0],
+// east v
+[10, 0]];
 
 /***/ })
 /******/ ]);
