@@ -73,15 +73,32 @@ let shipThrust$: Observable<number> = pilotInput$
  * on by shipThrust
  * REMEMBER WE NEED ACCESS TO shipRotation$
  */
-let shipPos$: Observable<ShipPosition> = shipThrust$
-    .combineLatest(shipRotation$, (shipThrust, shipRotation) => ({shipThrust, shipRotation}))
+let shipPos$: Observable<ShipPosition> =
+    /**
+     * if rotating and not thrusting,
+     * we don't want to alter center points
+     */
+    pilotInput$
+    .filter(input => input !== 'fire')
+    .combineLatest(shipThrust$, shipRotation$, (inputType, shipThrust, shipRotation) => ({inputType, shipThrust, shipRotation}))
     .scan(transformShipCenter, {
         center: {
             x: canvas.width / 2,
             y: canvas.height / 2
         },
         rotation: 0
-    });
+    })
+    // we sample an input, so we need starting vals to project
+        // to initial render
+    .startWith(
+        {
+            center: {
+                x: canvas.width / 2,
+                y: canvas.height / 2
+            },
+            rotation: 0
+        }
+    );
 
 /**
  * ship.fire should only be true when space is depressed,

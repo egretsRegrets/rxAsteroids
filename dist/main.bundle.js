@@ -338,7 +338,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var isFunction_1 = __webpack_require__(8);
 var Subscription_1 = __webpack_require__(3);
-var Observer_1 = __webpack_require__(18);
+var Observer_1 = __webpack_require__(19);
 var rxSubscriber_1 = __webpack_require__(10);
 /**
  * Implements the {@link Observer} interface and extends the
@@ -627,7 +627,7 @@ exports.root = _root;
 "use strict";
 
 var isArray_1 = __webpack_require__(5);
-var isObject_1 = __webpack_require__(17);
+var isObject_1 = __webpack_require__(18);
 var isFunction_1 = __webpack_require__(8);
 var tryCatch_1 = __webpack_require__(9);
 var errorObject_1 = __webpack_require__(6);
@@ -1301,9 +1301,9 @@ exports.OuterSubscriber = OuterSubscriber;
 "use strict";
 
 var root_1 = __webpack_require__(2);
-var isArrayLike_1 = __webpack_require__(21);
-var isPromise_1 = __webpack_require__(22);
-var isObject_1 = __webpack_require__(17);
+var isArrayLike_1 = __webpack_require__(22);
+var isPromise_1 = __webpack_require__(23);
+var isObject_1 = __webpack_require__(18);
 var Observable_1 = __webpack_require__(0);
 var iterator_1 = __webpack_require__(12);
 var InnerSubscriber_1 = __webpack_require__(53);
@@ -1384,6 +1384,36 @@ exports.subscribeToResult = subscribeToResult;
 
 "use strict";
 
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+var FPS = exports.FPS = 60;
+var CONTROLS = exports.CONTROLS = {
+    38: 'thrust',
+    37: 'rotate-left',
+    39: 'rotate-right',
+    32: 'fire'
+};
+var THRUST_SPD = exports.THRUST_SPD = 3;
+/**
+ * 2d collection defines vertices of ship,
+ * will be offset from pos.x && pos.y in renderShip()
+ */
+var SHIP_VERT = exports.SHIP_VERT = [
+// north v
+[0, -10],
+// west v
+[-10, 0],
+// east v
+[10, 0]];
+
+/***/ }),
+/* 18 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
 function isObject(x) {
     return x != null && typeof x === 'object';
 }
@@ -1391,7 +1421,7 @@ exports.isObject = isObject;
 //# sourceMappingURL=isObject.js.map
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1405,7 +1435,7 @@ exports.empty = {
 //# sourceMappingURL=Observer.js.map
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1553,7 +1583,7 @@ exports.AsyncAction = AsyncAction;
 //# sourceMappingURL=AsyncAction.js.map
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1610,7 +1640,7 @@ exports.AsyncScheduler = AsyncScheduler;
 //# sourceMappingURL=AsyncScheduler.js.map
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1619,7 +1649,7 @@ exports.isArrayLike = (function (x) { return x && typeof x.length === 'number'; 
 //# sourceMappingURL=isArrayLike.js.map
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1631,7 +1661,7 @@ exports.isPromise = isPromise;
 //# sourceMappingURL=isPromise.js.map
 
 /***/ }),
-/* 23 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1748,7 +1778,7 @@ exports.MergeAllSubscriber = MergeAllSubscriber;
 //# sourceMappingURL=mergeAll.js.map
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1922,97 +1952,6 @@ exports.AnonymousSubject = AnonymousSubject;
 //# sourceMappingURL=Subject.js.map
 
 /***/ }),
-/* 25 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.renderScene = renderScene;
-
-var _consts = __webpack_require__(76);
-
-var posX = window.innerWidth / 2;
-var posY = window.innerHeight / 2;
-function renderScene(canvas, ctx, scene) {
-    renderBackground(canvas, ctx);
-    renderShip(ctx, scene.ship);
-}
-function renderShip(ctx, ship) {
-    var canvas = document.getElementById('asteroids_canvas');
-    var con = canvas.getContext("2d");
-    var angle = ship.rotation;
-    // defining ship triangle
-    con.save();
-    con.translate(ship.center.x, ship.center.y);
-    con.rotate(angle);
-    con.strokeStyle = '#EEE';
-    // pre-drawing positioning
-    con.beginPath();
-    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
-    con.moveTo(_consts.SHIP_VERT[0][0], _consts.SHIP_VERT[0][1]);
-    // begin drawing
-    con.lineTo(_consts.SHIP_VERT[1][0], _consts.SHIP_VERT[1][1]);
-    con.lineTo(_consts.SHIP_VERT[2][0], _consts.SHIP_VERT[2][1]);
-    con.closePath();
-    con.stroke();
-    con.restore();
-}
-function renderBackground(canvas, ctx) {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
-}
-/*
-var can = document.getElementById("canvas"),
-    con = can.getContext("2d"),
-    pos = { x:can.width/2, y:can.height/2 },
-    v = [[0,-10],[-10,0],[10,0]],
-    angle = 0;
-
-setInterval(function(){
-    con.save();
-    con.fillStyle = "rgba(0, 0, 0, 0.2)";
-    con.fillRect(0, 0, can.width, can.height);
-    con.restore();
-    con.save();
-    con.translate(pos.x,pos.y);
-    con.rotate(angle);
-    con.fillStyle = "rgba(150, 255, 0, 0.3)";
-    con.strokeStyle = "#96FF00";
-    con.beginPath();
-    con.moveTo(v[0][0],v[0][1]);
-    con.lineTo(v[1][0],v[1][1]);
-    con.lineTo(v[2][0],v[2][1]);
-    con.closePath();
-    con.stroke();
-    con.fill();
-    con.restore();
-},33);
-
-document.addEventListener("keydown",function (e) {
-    switch (e.charCode || e.keyCode){ //
-        // turning
-        case 37:angle-=(Math.PI/3)/10;  break;
-        case 39:angle+=(Math.PI/3)/10; break;
-        // accelerator
-        case 38:
-        pos.x += 3 * Math.sin(angle);
-        pos.y += -3 * Math.cos(angle);
-        break;
-        // brake
-        case 40:; break;
-      }
-});
-
-http://jsfiddle.net/sadasant/3sBRh/4/
-
-*/
-
-/***/ }),
 /* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2049,9 +1988,9 @@ __webpack_require__(73);
 
 var _utils = __webpack_require__(75);
 
-var _canvas = __webpack_require__(25);
+var _canvas = __webpack_require__(76);
 
-var _consts = __webpack_require__(76);
+var _consts = __webpack_require__(17);
 
 // create, append canvas
 var canvas = document.createElement('canvas');
@@ -2097,9 +2036,22 @@ var shipThrust$ = pilotInput$.filter(function (input) {
  * on by shipThrust
  * REMEMBER WE NEED ACCESS TO shipRotation$
  */
-var shipPos$ = shipThrust$.combineLatest(shipRotation$, function (shipThrust, shipRotation) {
-    return { shipThrust: shipThrust, shipRotation: shipRotation };
+var shipPos$ =
+/**
+ * if rotating and not thrusting,
+ * we don't want to alter center points
+ */
+pilotInput$.filter(function (input) {
+    return input !== 'fire';
+}).combineLatest(shipThrust$, shipRotation$, function (inputType, shipThrust, shipRotation) {
+    return { inputType: inputType, shipThrust: shipThrust, shipRotation: shipRotation };
 }).scan(_utils.transformShipCenter, {
+    center: {
+        x: canvas.width / 2,
+        y: canvas.height / 2
+    },
+    rotation: 0
+}).startWith({
     center: {
         x: canvas.width / 2,
         y: canvas.height / 2
@@ -2160,7 +2112,7 @@ var game$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.
 
 var Subscriber_1 = __webpack_require__(1);
 var rxSubscriber_1 = __webpack_require__(10);
-var Observer_1 = __webpack_require__(18);
+var Observer_1 = __webpack_require__(19);
 function toSubscriber(nextOrObserver, error, complete) {
     if (nextOrObserver) {
         if (nextOrObserver instanceof Subscriber_1.Subscriber) {
@@ -2261,7 +2213,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var AsyncAction_1 = __webpack_require__(19);
+var AsyncAction_1 = __webpack_require__(20);
 var AnimationFrame_1 = __webpack_require__(32);
 /**
  * We need this JSDoc comment for affecting ESDoc.
@@ -2412,7 +2364,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var AsyncScheduler_1 = __webpack_require__(20);
+var AsyncScheduler_1 = __webpack_require__(21);
 var AnimationFrameScheduler = (function (_super) {
     __extends(AnimationFrameScheduler, _super);
     function AnimationFrameScheduler() {
@@ -2532,8 +2484,8 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var isArray_1 = __webpack_require__(5);
-var isArrayLike_1 = __webpack_require__(21);
-var isPromise_1 = __webpack_require__(22);
+var isArrayLike_1 = __webpack_require__(22);
+var isPromise_1 = __webpack_require__(23);
 var PromiseObservable_1 = __webpack_require__(38);
 var IteratorObservable_1 = __webpack_require__(39);
 var ArrayObservable_1 = __webpack_require__(4);
@@ -3578,8 +3530,8 @@ exports.isNumeric = isNumeric;
 
 "use strict";
 
-var AsyncAction_1 = __webpack_require__(19);
-var AsyncScheduler_1 = __webpack_require__(20);
+var AsyncAction_1 = __webpack_require__(20);
+var AsyncScheduler_1 = __webpack_require__(21);
 /**
  *
  * Async Scheduler
@@ -4193,7 +4145,7 @@ Observable_1.Observable.prototype.merge = merge_1.merge;
 
 var Observable_1 = __webpack_require__(0);
 var ArrayObservable_1 = __webpack_require__(4);
-var mergeAll_1 = __webpack_require__(23);
+var mergeAll_1 = __webpack_require__(24);
 var isScheduler_1 = __webpack_require__(7);
 /* tslint:enable:max-line-length */
 /**
@@ -4490,7 +4442,7 @@ Observable_1.Observable.prototype.share = share_1.share;
 "use strict";
 
 var multicast_1 = __webpack_require__(66);
-var Subject_1 = __webpack_require__(24);
+var Subject_1 = __webpack_require__(25);
 function shareSubjectFactory() {
     return new Subject_1.Subject();
 }
@@ -4587,7 +4539,7 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var Subject_1 = __webpack_require__(24);
+var Subject_1 = __webpack_require__(25);
 var Observable_1 = __webpack_require__(0);
 var Subscriber_1 = __webpack_require__(1);
 var Subscription_1 = __webpack_require__(3);
@@ -4902,7 +4854,7 @@ exports.startWith = startWith;
 var Observable_1 = __webpack_require__(0);
 var isScheduler_1 = __webpack_require__(7);
 var ArrayObservable_1 = __webpack_require__(4);
-var mergeAll_1 = __webpack_require__(23);
+var mergeAll_1 = __webpack_require__(24);
 /* tslint:enable:max-line-length */
 /**
  * Creates an output Observable which sequentially emits all values from every
@@ -5234,22 +5186,22 @@ exports.rotateShip = rotateShip;
 exports.resolveThrust = resolveThrust;
 exports.transformShipCenter = transformShipCenter;
 
-var _consts = __webpack_require__(76);
+var _consts = __webpack_require__(17);
 
 function rotateShip(angle, rotation) {
-    return rotation === 'rotate-left' ? angle -= Math.PI / 3 / 10 : angle += Math.PI / 3 / 10;
+    return rotation === 'rotate-left' ? angle -= Math.PI / 3 / _consts.THRUST_SPD : angle += Math.PI / 3 / _consts.THRUST_SPD;
 }
 function resolveThrust(thrust, accel) {
     return _consts.THRUST_SPD;
 }
 function transformShipCenter(position, movement) {
-    return {
-        center: {
-            x: position.center.x += movement.shipThrust * Math.sin(movement.shipRotation),
-            y: position.center.y += -movement.shipThrust * Math.cos(movement.shipRotation)
-        },
-        rotation: movement.shipRotation
-    };
+    if (movement.inputType === 'thrust') {
+        position.center.x += movement.shipThrust * Math.sin(movement.shipRotation);
+        position.center.y += -movement.shipThrust * Math.cos(movement.shipRotation);
+    } else {
+        position.rotation = movement.shipRotation;
+    }
+    return position;
 }
 
 /***/ }),
@@ -5262,25 +5214,86 @@ function transformShipCenter(position, movement) {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-var FPS = exports.FPS = 60;
-var CONTROLS = exports.CONTROLS = {
-    38: 'thrust',
-    37: 'rotate-left',
-    39: 'rotate-right',
-    32: 'fire'
-};
-var THRUST_SPD = exports.THRUST_SPD = 5;
-/**
- * 2d collection defines vertices of ship,
- * will be offset from pos.x && pos.y in renderShip()
- */
-var SHIP_VERT = exports.SHIP_VERT = [
-// north v
-[0, -10],
-// west v
-[-10, 0],
-// east v
-[10, 0]];
+exports.renderScene = renderScene;
+
+var _consts = __webpack_require__(17);
+
+var posX = window.innerWidth / 2;
+var posY = window.innerHeight / 2;
+function renderScene(canvas, ctx, scene) {
+    renderBackground(canvas, ctx);
+    renderShip(ctx, scene.ship);
+}
+function renderShip(ctx, ship) {
+    var canvas = document.getElementById('asteroids_canvas');
+    var con = canvas.getContext("2d");
+    var angle = ship.rotation;
+    // defining ship triangle
+    con.save();
+    con.translate(ship.center.x, ship.center.y);
+    con.rotate(angle);
+    con.strokeStyle = '#EEE';
+    // pre-drawing positioning
+    con.beginPath();
+    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
+    con.moveTo(_consts.SHIP_VERT[0][0], _consts.SHIP_VERT[0][1]);
+    // begin drawing
+    con.lineTo(_consts.SHIP_VERT[1][0], _consts.SHIP_VERT[1][1]);
+    con.lineTo(_consts.SHIP_VERT[2][0], _consts.SHIP_VERT[2][1]);
+    con.closePath();
+    con.stroke();
+    con.restore();
+}
+function renderBackground(canvas, ctx) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+}
+/*
+var can = document.getElementById("canvas"),
+    con = can.getContext("2d"),
+    pos = { x:can.width/2, y:can.height/2 },
+    v = [[0,-10],[-10,0],[10,0]],
+    angle = 0;
+
+setInterval(function(){
+    con.save();
+    con.fillStyle = "rgba(0, 0, 0, 0.2)";
+    con.fillRect(0, 0, can.width, can.height);
+    con.restore();
+    con.save();
+    con.translate(pos.x,pos.y);
+    con.rotate(angle);
+    con.fillStyle = "rgba(150, 255, 0, 0.3)";
+    con.strokeStyle = "#96FF00";
+    con.beginPath();
+    con.moveTo(v[0][0],v[0][1]);
+    con.lineTo(v[1][0],v[1][1]);
+    con.lineTo(v[2][0],v[2][1]);
+    con.closePath();
+    con.stroke();
+    con.fill();
+    con.restore();
+},33);
+
+document.addEventListener("keydown",function (e) {
+    switch (e.charCode || e.keyCode){ //
+        // turning
+        case 37:angle-=(Math.PI/3)/10;  break;
+        case 39:angle+=(Math.PI/3)/10; break;
+        // accelerator
+        case 38:
+        pos.x += 3 * Math.sin(angle);
+        pos.y += -3 * Math.cos(angle);
+        break;
+        // brake
+        case 40:; break;
+      }
+});
+
+http://jsfiddle.net/sadasant/3sBRh/4/
+
+*/
 
 /***/ })
 /******/ ]);

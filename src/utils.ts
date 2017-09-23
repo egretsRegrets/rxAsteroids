@@ -4,8 +4,8 @@ import { THRUST_SPD } from './consts';
 
 export function rotateShip(angle, rotation) {
     return rotation === 'rotate-left'
-    ? angle -= (Math.PI / 3) / 10
-    : angle += (Math.PI / 3) / 10;
+    ? angle -= (Math.PI / 3) / THRUST_SPD
+    : angle += (Math.PI / 3) / THRUST_SPD;
 }
 
 export function resolveThrust(thrust, accel) {
@@ -13,11 +13,12 @@ export function resolveThrust(thrust, accel) {
 }
 
 export function transformShipCenter (position: ShipPosition, movement): ShipPosition {
-    return {
-        center: {
-            x: position.center.x += movement.shipThrust * Math.sin(movement.shipRotation),
-            y: position.center.y += -movement.shipThrust * Math.cos(movement.shipRotation)
-        },
-        rotation: movement.shipRotation
-    };
+    if (movement.inputType === 'thrust'){
+        position.center.x += movement.shipThrust * Math.sin(movement.shipRotation);
+        position.center.y += -movement.shipThrust * Math.cos(movement.shipRotation);
+    }
+    else {
+        position.rotation = movement.shipRotation;
+    }
+    return position;
 }

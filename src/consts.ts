@@ -8,7 +8,7 @@ export const CONTROLS: Controls = {
     39: 'rotate-right',
     32: 'fire'
 }
-export const THRUST_SPD = 5;
+export const THRUST_SPD = 3;
 
 /**
  * 2d collection defines vertices of ship,
