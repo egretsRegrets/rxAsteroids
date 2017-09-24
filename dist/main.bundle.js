@@ -1396,7 +1396,8 @@ var CONTROLS = exports.CONTROLS = {
     32: 'fire'
 };
 var THRUST_SPD = exports.THRUST_SPD = 4.5;
-var THRUST_CEIL = exports.THRUST_CEIL = 1.5;
+var THRUST_CEIL = exports.THRUST_CEIL = 1.25;
+var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
 /**
  * 2d collection defines vertices of ship,
  * will be offset from pos.x && pos.y in renderShip()
@@ -2177,10 +2178,14 @@ var keydown$ = _Observable.Observable.fromEvent(document, 'keydown');
 // pipeline - user input to ship model 
 // filter only those keyboard inputs we're looking for
 var pilotInput$ = keydown$.map(function (event) {
-    return _consts.CONTROLS[event.keyCode];
-}).filter(function (control) {
-    return !!control;
-});
+    return event.keyCode;
+}).filter(function (keyCode) {
+    if (_consts.CONTROLS[keyCode] !== undefined) {
+        return true;
+    }
+}).map(function (controlCode) {
+    return _consts.CONTROLS[controlCode];
+}).startWith("no-input");
 /**
  * ship.fire should only be true when space is depressed,
  * otherwise, ship.fire should be false
@@ -2213,7 +2218,7 @@ var decel$ = _Observable.Observable.fromEvent(document, 'keyup').map(function (e
     return control === 'thrust';
 }).switchMap(function () {
     return _Observable.Observable.interval(300).map(function (tick) {
-        return -.3;
+        return -.25;
     }).takeUntil(accel$);
 });
 /**
@@ -2223,17 +2228,15 @@ var decel$ = _Observable.Observable.fromEvent(document, 'keyup').map(function (e
  * until it reaches 0, which is also its starting point
  */
 var shipThrust$ = _Observable.Observable.merge(accel$, decel$).scan(_utils.resolveThrust).startWith(0).distinctUntilChanged();
-/**
- * keep track of center of ship
- * drawing context, eventually to be acted
- * on by shipThrust
- * REMEMBER WE NEED ACCESS TO shipRotation$
- */
+// shipPos$ will keep track of the center of the ship, as well as its rotation,
+// an angle in radians. We also want to store rotation at the time of the 
+// last increase in thrust - this helps us maintain velocity in the direction
+// of a given thrust, even if the ship turns along the way.
 var shipPos$ =
-/**
- * if rotating and not thrusting,
- * we don't want to alter center points
- */
+// note that, in order to render scene prior to input, by the first
+// interval either all combined Observables need to have emitted
+// a value, or shipPos$ needs to start with a val. we opt for the
+// first option here; all input observables have startWith(<val>).
 _Observable.Observable.interval(_consts.FPS / 1000, _animationFrame.animationFrame).combineLatest(pilotInput$, shipThrust$, shipRotation$, function (_, pilotInput, shipThrust, shipRotation) {
     return { pilotInput: pilotInput, shipThrust: shipThrust, shipRotation: shipRotation };
 }).scan(_utils.transformShipCenter, {
@@ -2243,20 +2246,12 @@ _Observable.Observable.interval(_consts.FPS / 1000, _animationFrame.animationFra
     },
     rotation: 0,
     rotationAtThrust: 0
-}).startWith({
-    center: {
-        x: canvas.width / 2,
-        y: canvas.height / 2
-    },
-    rotation: 0,
-    rotationAtThrust: 0
 });
-/**
- * here we need a way to only take a snap shot of the
- * ship model when one of it's properties is changed,
- * that is - anytime it fires, experiences a change in rotation or thrust
- */
-var ship$ = shipTicks$.combineLatest(shipPos$, shipFire$, function (_, shipPos, shipFire) {
+// ship should contain all the info about the ship in time that we want to pass
+// to scene$. It combines ship position with info about the ship firing.
+// In emitting, we dispense with the rotationAtThrust property
+// from shipPos$ emissions.
+var ship$ = shipPos$.withLatestFrom(shipFire$, function (shipPos, shipFire) {
     return {
         rotation: shipPos.rotation,
         center: shipPos.center,
@@ -5756,7 +5751,8 @@ function rotateShip(angle, rotation) {
 }
 function resolveThrust(velocity, acceleration) {
     // allow accelerate up to THRUST_CEIL and as low as 0
-    return velocity + acceleration <= _consts.THRUST_CEIL && velocity + acceleration > 0 ? velocity + acceleration : velocity;
+    console.log(velocity);
+    return velocity + acceleration <= _consts.THRUST_CEIL && velocity + acceleration >= _consts.THRUST_FLOOR ? velocity + acceleration : velocity;
 }
 // center transformation and rotation checks on alternate frames
 function transformShipCenter(position, movement) {

@@ -14,10 +14,10 @@ export interface ShipPosition {
     rotationAtThrust: number;
 }
 
-type pilotInput = "thrust" | "fire" | "rotate-left" | "rotate-right";
+export type PilotInput = "thrust" | "fire" | "rotate-left" | "rotate-right" | "no-input";
 
 export interface ShipMovement {
-    pilotInput: pilotInput,
+    pilotInput: PilotInput,
     shipThrust: number,
     shipRotation: number
 }

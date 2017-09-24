@@ -31,7 +31,7 @@ import {
 } from './utils';
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, THRUST_SPD } from './consts';
-import { ShipPosition, Ship, Point2d, ShipMovement} from './interfaces';
+import { ShipPosition, Ship, Point2d, ShipMovement, PilotInput} from './interfaces';
 
 // create, append canvas
 let canvas = <HTMLCanvasElement>document.createElement('canvas');
@@ -56,9 +56,16 @@ let keydown$: Observable<KeyboardEvent> = Observable
 // pipeline - user input to ship model 
 
 // filter only those keyboard inputs we're looking for
-let pilotInput$: Observable<string> = keydown$
-    .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
-    .filter(control => !!control);
+let pilotInput$: Observable<PilotInput> = keydown$
+    .map((event: KeyboardEvent) => event.keyCode)
+    // only move on if keyCode has an opposite member in CONTROLS
+    .filter((keyCode: number) => {
+        if (CONTROLS[keyCode] !== undefined){
+            return true;
+        }
+    })
+    .map((controlCode) => <PilotInput>CONTROLS[controlCode])
+    .startWith("no-input");
 
 /**
  * ship.fire should only be true when space is depressed,
@@ -87,13 +94,13 @@ let accel$: Observable<number> = Observable
 
 // letting off thruster key
     // to trigger deceleration
-let decel$ = Observable
+let decel$: Observable<number> = Observable
     .fromEvent(document, 'keyup')
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
     .filter(control => control === 'thrust')
     .switchMap( () => Observable
         .interval(300)
-        .map(tick => -.3)
+        .map(tick => -.25)
         .takeUntil(accel$)
     );
 
@@ -109,17 +116,15 @@ let shipThrust$: Observable<number> = Observable
     .startWith(0)
     .distinctUntilChanged();
 
-/**
- * keep track of center of ship
- * drawing context, eventually to be acted
- * on by shipThrust
- * REMEMBER WE NEED ACCESS TO shipRotation$
- */
+// shipPos$ will keep track of the center of the ship, as well as its rotation,
+    // an angle in radians. We also want to store rotation at the time of the 
+    // last increase in thrust - this helps us maintain velocity in the direction
+    // of a given thrust, even if the ship turns along the way.
 let shipPos$: Observable<ShipPosition> =
-    /**
-     * if rotating and not thrusting,
-     * we don't want to alter center points
-     */
+    // note that, in order to render scene prior to input, by the first
+            // interval either all combined Observables need to have emitted
+            // a value, or shipPos$ needs to start with a val. we opt for the
+            // first option here; all input observables have startWith(<val>).
     Observable.interval(FPS / 1000, animationFrame)
     .combineLatest( pilotInput$, shipThrust$, shipRotation$,
         (_, pilotInput, shipThrust, shipRotation) =>
@@ -132,34 +137,21 @@ let shipPos$: Observable<ShipPosition> =
         },
         rotation: 0,
         rotationAtThrust: 0
-    })
-    // we sample an input, so we need starting vals to project
-        // to initial render
-    .startWith(
-        <ShipPosition>{
-            center: {
-                x: canvas.width / 2,
-                y: canvas.height / 2
-            },
-            rotation: 0,
-            rotationAtThrust: 0
-        }
-    );
+    });
 
-/**
- * here we need a way to only take a snap shot of the
- * ship model when one of it's properties is changed,
- * that is - anytime it fires, experiences a change in rotation or thrust
- */
-let ship$: Observable<Ship> = shipTicks$
-    .combineLatest(
-        shipPos$, shipFire$,
-        (_, shipPos, shipFire) => ({
+// ship should contain all the info about the ship in time that we want to pass
+    // to scene$. It combines ship position with info about the ship firing.
+    // In emitting, we dispense with the rotationAtThrust property
+    // from shipPos$ emissions.
+let ship$: Observable<Ship> = shipPos$
+    .withLatestFrom(
+        shipFire$,
+        (shipPos, shipFire) => ({
             rotation: shipPos.rotation,
             center: shipPos.center,
             fire: shipFire
         })
-    )
+    );
 
 /**
  * scene observable to combine all of the observables

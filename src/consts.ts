@@ -9,7 +9,8 @@ export const CONTROLS: Controls = {
     32: 'fire'
 }
 export const THRUST_SPD = 4.5;
-export const THRUST_CEIL = 1.5;
+export const THRUST_CEIL = 1.25;
+export const THRUST_FLOOR = .25;
 
 /**
  * 2d collection defines vertices of ship,

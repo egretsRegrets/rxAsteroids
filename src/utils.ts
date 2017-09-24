@@ -1,6 +1,6 @@
 
 import { ShipPosition, Ship, Point2d, ShipMovement } from './interfaces';
-import { THRUST_SPD, THRUST_CEIL } from './consts';
+import { THRUST_SPD, THRUST_CEIL, THRUST_FLOOR } from './consts';
 
 export function rotateShip(angle, rotation) {
     return rotation === 'rotate-left'
@@ -10,8 +10,9 @@ export function rotateShip(angle, rotation) {
 
 export function resolveThrust(velocity, acceleration) {
     // allow accelerate up to THRUST_CEIL and as low as 0
+    console.log(velocity);
     return (velocity + acceleration) <= THRUST_CEIL &&
-    (velocity + acceleration) > 0 ?
+    (velocity + acceleration) >= THRUST_FLOOR ?
     velocity + acceleration :
     velocity;
 
