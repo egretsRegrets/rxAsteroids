@@ -2052,7 +2052,7 @@ var accel$ = _Observable.Observable.fromEvent(document, 'keydown').map(function 
 }).map(function (accelInput) {
     return 1;
 }).throttle(function (val) {
-    return _Observable.Observable.interval(1000 / (_consts.FPS / 2), _animationFrame.animationFrame);
+    return _Observable.Observable.interval(100);
 });
 // letting off thruster key
 // to trigger deceleration
@@ -2061,8 +2061,8 @@ var decel$ = _Observable.Observable.fromEvent(document, 'keyup').map(function (e
 }).filter(function (control) {
     return control === 'thrust';
 }).switchMap(function () {
-    return _Observable.Observable.interval(1000 / (_consts.FPS / 2), _animationFrame.animationFrame).map(function (tick) {
-        return -.7;
+    return _Observable.Observable.interval(100).map(function (tick) {
+        return -.25;
     }).takeUntil(accel$);
 });
 /**

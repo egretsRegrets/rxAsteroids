@@ -82,7 +82,7 @@ let accel$: Observable<number> = Observable
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
     .filter(control => control === 'thrust')
     .map(accelInput => 1)
-    .throttle(val => Observable.interval(1000 / (FPS / 2), animationFrame));
+    .throttle(val => Observable.interval(100));
     
 
 // letting off thruster key
@@ -92,8 +92,8 @@ let decel$ = Observable
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
     .filter(control => control === 'thrust')
     .switchMap( () => Observable
-        .interval(1000 / (FPS / 2), animationFrame)
-        .map(tick => -.7)
+        .interval(100)
+        .map(tick => -.25)
         .takeUntil(accel$)
     );
 
