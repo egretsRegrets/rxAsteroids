@@ -11,7 +11,6 @@ export function renderScene(canvas, ctx, scene) {
 }
 
 function renderShip(ctx, ship: Ship) {
-
     let canvas = <HTMLCanvasElement>document.getElementById('asteroids_canvas');
     let con = canvas.getContext("2d");
     let angle = ship.rotation;

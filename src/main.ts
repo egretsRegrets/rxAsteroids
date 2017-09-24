@@ -31,7 +31,7 @@ import {
 } from './utils';
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, THRUST_SPD } from './consts';
-import { ShipPosition, Ship, Point2d} from './interfaces';
+import { ShipPosition, Ship, Point2d, ShipMovement} from './interfaces';
 
 // create, append canvas
 let canvas = <HTMLCanvasElement>document.createElement('canvas');
@@ -81,8 +81,8 @@ let accel$: Observable<number> = Observable
     .fromEvent(document, 'keydown')
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
     .filter(control => control === 'thrust')
-    .map(accelInput => 1)
-    .throttle(val => Observable.interval(100));
+    .map(accelInput => .25)
+    .throttle(val => Observable.interval(50));
     
 
 // letting off thruster key
@@ -92,8 +92,8 @@ let decel$ = Observable
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
     .filter(control => control === 'thrust')
     .switchMap( () => Observable
-        .interval(100)
-        .map(tick => -.25)
+        .interval(300)
+        .map(tick => -.3)
         .takeUntil(accel$)
     );
 
@@ -110,16 +110,6 @@ let shipThrust$: Observable<number> = Observable
     .distinctUntilChanged();
 
 /**
- * TODO:
- * change shipPos and ship, so that shipPos, checks
- * position at each shipTick$[],
- * and ship just checks for ship fire at each emission of shipPos
- * and then combines them.
- * currently we aren't truly modeling ship pos through time,
- * but only getting new snapshots on pilot input: this is a bad idea
- */
-
-/**
  * keep track of center of ship
  * drawing context, eventually to be acted
  * on by shipThrust
@@ -130,25 +120,29 @@ let shipPos$: Observable<ShipPosition> =
      * if rotating and not thrusting,
      * we don't want to alter center points
      */
-    pilotInput$
-    .filter(input => input !== 'fire')
-    .combineLatest(shipThrust$, shipRotation$, (inputType, shipThrust, shipRotation) => ({inputType, shipThrust, shipRotation}))
-    .scan(transformShipCenter, {
+    Observable.interval(FPS / 1000, animationFrame)
+    .combineLatest( pilotInput$, shipThrust$, shipRotation$,
+        (_, pilotInput, shipThrust, shipRotation) =>
+        (<ShipMovement>{ pilotInput, shipThrust, shipRotation})
+    )
+    .scan(transformShipCenter, <ShipPosition>{
         center: {
             x: canvas.width / 2,
             y: canvas.height / 2
         },
-        rotation: 0
+        rotation: 0,
+        rotationAtThrust: 0
     })
     // we sample an input, so we need starting vals to project
         // to initial render
     .startWith(
-        {
+        <ShipPosition>{
             center: {
                 x: canvas.width / 2,
                 y: canvas.height / 2
             },
-            rotation: 0
+            rotation: 0,
+            rotationAtThrust: 0
         }
     );
 
@@ -181,6 +175,7 @@ let scene$: Observable<Ship> = ship$
  * game observable to project to
  * rendering function at fps interval
  */
+
 let game$ = Observable
     .interval(1000 / FPS, animationFrame)
     .withLatestFrom(scene$, (_, scene) => scene)
