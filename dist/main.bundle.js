@@ -1395,9 +1395,13 @@ var CONTROLS = exports.CONTROLS = {
     39: 'rotate-right',
     32: 'fire'
 };
+/**
+ * chang THRUST_SPD to ROTATION_NUM, or something
+ */
 var THRUST_SPD = exports.THRUST_SPD = 4.5;
-var THRUST_CEIL = exports.THRUST_CEIL = 1.25;
+var THRUST_CEIL = exports.THRUST_CEIL = 1.5;
 var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
+var MISSILE_SPD = exports.MISSILE_SPD = 5;
 /**
  * 2d collection defines vertices of ship,
  * will be offset from pos.x && pos.y in renderShip()
@@ -2186,15 +2190,6 @@ var pilotInput$ = keydown$.map(function (event) {
 }).map(function (controlCode) {
     return _consts.CONTROLS[controlCode];
 }).startWith("no-input");
-/**
- * ship.fire should only be true when space is depressed,
- * otherwise, ship.fire should be false
- */
-var shipFire$ = pilotInput$.filter(function (input) {
-    return input === 'fire';
-}).map(function (fired) {
-    return true;
-}).startWith(false);
 // ship rotation changes angle in rad based on left, right keys
 var shipRotation$ = pilotInput$.filter(function (input) {
     return input === 'rotate-left' || input === 'rotate-right';
@@ -2212,6 +2207,10 @@ var accel$ = _Observable.Observable.fromEvent(document, 'keydown').map(function 
 });
 // letting off thruster key
 // to trigger deceleration
+/**
+ * let's think about throttling decel, so that decel doesn't start
+ * right away
+ */
 var decel$ = _Observable.Observable.fromEvent(document, 'keyup').map(function (event) {
     return _consts.CONTROLS[event.keyCode];
 }).filter(function (control) {
@@ -2237,7 +2236,7 @@ var shipPos$ =
 // interval either all combined Observables need to have emitted
 // a value, or shipPos$ needs to start with a val. we opt for the
 // first option here; all input observables have startWith(<val>).
-_Observable.Observable.interval(_consts.FPS / 1000, _animationFrame.animationFrame).combineLatest(pilotInput$, shipThrust$, shipRotation$, function (_, pilotInput, shipThrust, shipRotation) {
+_Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).combineLatest(pilotInput$, shipThrust$, shipRotation$, function (_, pilotInput, shipThrust, shipRotation) {
     return { pilotInput: pilotInput, shipThrust: shipThrust, shipRotation: shipRotation };
 }).scan(_utils.transformShipCenter, {
     center: {
@@ -2247,22 +2246,41 @@ _Observable.Observable.interval(_consts.FPS / 1000, _animationFrame.animationFra
     rotation: 0,
     rotationAtThrust: 0
 });
-// ship should contain all the info about the ship in time that we want to pass
-// to scene$. It combines ship position with info about the ship firing.
-// In emitting, we dispense with the rotationAtThrust property
-// from shipPos$ emissions.
-var ship$ = shipPos$.withLatestFrom(shipFire$, function (shipPos, shipFire) {
+// shipFire$ needs to track the fire key - which will trigger the emission
+// of a new projectile. Each projectile emitted needs to keep track of 
+// a Point2d equal to the center prop of latest shipPos$ emission at time
+// of shipFire$ input - these coords to be transformed into the starting
+// point of the projectile. We also need to keep track of shipPos$ rotation prop
+// at fire, so we can continue to move the projectiles at the angle from which
+// they were fired.
+var shipFire$ = pilotInput$.filter(function (input) {
+    return input === 'fire';
+}).scan(function (missilesLaunched) {
+    return missilesLaunched + 1;
+}, 0).withLatestFrom(shipPos$, function (launchNum, shipPos) {
     return {
-        rotation: shipPos.rotation,
-        center: shipPos.center,
-        fire: shipFire
+        missileStart: shipPos.center,
+        missileAngle: shipPos.rotation,
+        launchNum: launchNum
     };
 });
+// These are player shots, a new one will be added with each emission from
+// shipFire$ and then will cease to be tracked when it strikes canvas bounds
+var playerProjectile$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).withLatestFrom(shipFire$, function (_, shipFires) {
+    return shipFires;
+}).scan(_utils.missileMapScan, { missiles: [], mNum: 0 }).map(function (missileState) {
+    return missileState.missiles;
+}).startWith([]);
 /**
  * scene observable to combine all of the observables
  * we want to expose to the scene rendering game observable
  */
-var scene$ = ship$.merge();
+var scene$ = shipPos$.withLatestFrom(playerProjectile$, function (ship, missiles) {
+    return {
+        ship: ship,
+        missiles: missiles
+    };
+});
 /**
  * game observable to project to
  * rendering function at fps interval
@@ -2272,10 +2290,10 @@ var game$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.
 }).map(function (scene) {
     return {
         ship: {
-            rotation: scene.rotation,
-            center: scene.center,
-            fire: scene.fire
-        }
+            rotation: scene.ship.rotation,
+            center: scene.ship.center
+        },
+        missiles: scene.missiles
     };
 }).subscribe({
     next: function next(scene) {
@@ -5743,6 +5761,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.rotateShip = rotateShip;
 exports.resolveThrust = resolveThrust;
 exports.transformShipCenter = transformShipCenter;
+exports.missileMapScan = missileMapScan;
 
 var _consts = __webpack_require__(17);
 
@@ -5751,7 +5770,6 @@ function rotateShip(angle, rotation) {
 }
 function resolveThrust(velocity, acceleration) {
     // allow accelerate up to THRUST_CEIL and as low as 0
-    console.log(velocity);
     return velocity + acceleration <= _consts.THRUST_CEIL && velocity + acceleration >= _consts.THRUST_FLOOR ? velocity + acceleration : velocity;
 }
 // center transformation and rotation checks on alternate frames
@@ -5766,6 +5784,40 @@ function transformShipCenter(position, movement) {
     position.center.y += -movement.shipThrust * Math.cos(position.rotationAtThrust);
     position.rotation = movement.shipRotation;
     return position;
+}
+// filter out out-of-bounds missile;
+//map missiles to MissileTransform;
+// add any new missile to missiles.
+function missileMapScan(mState, latestLaunch) {
+    var newMState = mState;
+    /**
+     * add filter for in-bounds here
+     */
+    // transform (move) each missile in collection
+    newMState.missiles = newMState.missiles.map(function (missile) {
+        return missileTransform(missile);
+    });
+    // if the launch number of the latest missile is greater than
+    // the missile number (mNum)
+    if (latestLaunch.launchNum > mState.mNum) {
+        newMState.mNum = latestLaunch.launchNum;
+        newMState.missiles.push({
+            pos: {
+                x: latestLaunch.missileStart.x,
+                y: latestLaunch.missileStart.y
+            },
+            firingAngle: latestLaunch.missileAngle
+        });
+    }
+    return newMState;
+}
+function missileInBounds() {}
+function missileTransform(missile) {
+    missile.pos = {
+        x: missile.pos.x += _consts.MISSILE_SPD * Math.sin(missile.firingAngle),
+        y: missile.pos.y += -_consts.MISSILE_SPD * Math.cos(missile.firingAngle)
+    };
+    return missile;
 }
 
 /***/ }),
@@ -5787,31 +5839,45 @@ var posY = window.innerHeight / 2;
 function renderScene(canvas, ctx, scene) {
     renderBackground(canvas, ctx);
     renderShip(ctx, scene.ship);
-}
-function renderShip(ctx, ship) {
-    var canvas = document.getElementById('asteroids_canvas');
-    var con = canvas.getContext("2d");
-    var angle = ship.rotation;
-    // defining ship triangle
-    con.save();
-    con.translate(ship.center.x, ship.center.y);
-    con.rotate(angle);
-    con.strokeStyle = '#EEE';
-    // pre-drawing positioning
-    con.beginPath();
-    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
-    con.moveTo(_consts.SHIP_VERT[0][0], _consts.SHIP_VERT[0][1]);
-    // begin drawing
-    con.lineTo(_consts.SHIP_VERT[1][0], _consts.SHIP_VERT[1][1]);
-    con.lineTo(_consts.SHIP_VERT[2][0], _consts.SHIP_VERT[2][1]);
-    con.closePath();
-    con.stroke();
-    con.restore();
+    renderMissiles(ctx, scene.missiles);
 }
 function renderBackground(canvas, ctx) {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
+}
+function renderShip(ctx, ship) {
+    var angle = ship.rotation;
+    // defining ship triangle
+    ctx.save();
+    ctx.translate(ship.center.x, ship.center.y);
+    ctx.rotate(angle);
+    ctx.strokeStyle = '#EEE';
+    // pre-drawing positioning
+    ctx.beginPath();
+    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
+    ctx.moveTo(_consts.SHIP_VERT[0][0], _consts.SHIP_VERT[0][1]);
+    // begin drawing
+    ctx.lineTo(_consts.SHIP_VERT[1][0], _consts.SHIP_VERT[1][1]);
+    ctx.lineTo(_consts.SHIP_VERT[2][0], _consts.SHIP_VERT[2][1]);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+}
+function renderMissiles(ctx, missiles) {
+    missiles.forEach(function (missile) {
+        ctx.save();
+        ctx.translate(missile.pos.x, missile.pos.y);
+        ctx.rotate(missile.firingAngle);
+        ctx.strokeStyle = '#EEE';
+        ctx.beginPath();
+        // starting point of projectile line
+        ctx.moveTo(0, -14);
+        ctx.lineTo(0, -22);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+    });
 }
 
 /***/ })

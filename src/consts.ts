@@ -8,9 +8,13 @@ export const CONTROLS: Controls = {
     39: 'rotate-right',
     32: 'fire'
 }
+/**
+ * chang THRUST_SPD to ROTATION_NUM, or something
+ */
 export const THRUST_SPD = 4.5;
-export const THRUST_CEIL = 1.25;
+export const THRUST_CEIL = 1.5;
 export const THRUST_FLOOR = .25;
+export const MISSILE_SPD = 5;
 
 /**
  * 2d collection defines vertices of ship,

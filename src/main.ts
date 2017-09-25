@@ -27,11 +27,21 @@ import 'rxjs/add/operator/withLatestFrom';
 import { 
     rotateShip,
     resolveThrust,
-    transformShipCenter
+    transformShipCenter,
+    missileMapScan
 } from './utils';
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, THRUST_SPD } from './consts';
-import { ShipPosition, Ship, Point2d, ShipMovement, PilotInput} from './interfaces';
+import { 
+    ShipPosition,
+    Point2d,
+    ShipMovement,
+    PilotInput,
+    Scene,
+    Launch,
+    Missile,
+    MState
+} from './interfaces';
 
 // create, append canvas
 let canvas = <HTMLCanvasElement>document.createElement('canvas');
@@ -67,15 +77,6 @@ let pilotInput$: Observable<PilotInput> = keydown$
     .map((controlCode) => <PilotInput>CONTROLS[controlCode])
     .startWith("no-input");
 
-/**
- * ship.fire should only be true when space is depressed,
- * otherwise, ship.fire should be false
- */
-let shipFire$: Observable<boolean> = pilotInput$
-    .filter(input => input === 'fire')
-    .map(fired => true)
-    .startWith(false);
-
 // ship rotation changes angle in rad based on left, right keys
 let shipRotation$: Observable<number> = pilotInput$
     .filter(input => input === 'rotate-left' || input === 'rotate-right')
@@ -94,6 +95,10 @@ let accel$: Observable<number> = Observable
 
 // letting off thruster key
     // to trigger deceleration
+/**
+ * let's think about throttling decel, so that decel doesn't start
+ * right away
+ */
 let decel$: Observable<number> = Observable
     .fromEvent(document, 'keyup')
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
@@ -125,7 +130,7 @@ let shipPos$: Observable<ShipPosition> =
             // interval either all combined Observables need to have emitted
             // a value, or shipPos$ needs to start with a val. we opt for the
             // first option here; all input observables have startWith(<val>).
-    Observable.interval(FPS / 1000, animationFrame)
+    Observable.interval(1000 / FPS, animationFrame)
     .combineLatest( pilotInput$, shipThrust$, shipRotation$,
         (_, pilotInput, shipThrust, shipRotation) =>
         (<ShipMovement>{ pilotInput, shipThrust, shipRotation})
@@ -139,45 +144,69 @@ let shipPos$: Observable<ShipPosition> =
         rotationAtThrust: 0
     });
 
-// ship should contain all the info about the ship in time that we want to pass
-    // to scene$. It combines ship position with info about the ship firing.
-    // In emitting, we dispense with the rotationAtThrust property
-    // from shipPos$ emissions.
-let ship$: Observable<Ship> = shipPos$
+// shipFire$ needs to track the fire key - which will trigger the emission
+    // of a new projectile. Each projectile emitted needs to keep track of 
+    // a Point2d equal to the center prop of latest shipPos$ emission at time
+    // of shipFire$ input - these coords to be transformed into the starting
+    // point of the projectile. We also need to keep track of shipPos$ rotation prop
+    // at fire, so we can continue to move the projectiles at the angle from which
+    // they were fired.
+let shipFire$: Observable<Launch> = pilotInput$
+    .filter(input => input === 'fire')
+    // update the number of missiles launched / the launch number of the new missile
+    .scan((missilesLaunched) => missilesLaunched + 1, 0)
     .withLatestFrom(
-        shipFire$,
-        (shipPos, shipFire) => ({
-            rotation: shipPos.rotation,
-            center: shipPos.center,
-            fire: shipFire
+        shipPos$,
+        (launchNum, shipPos) => ({
+            missileStart: shipPos.center,
+            missileAngle: shipPos.rotation,
+            launchNum
         })
     );
+
+// These are player shots, a new one will be added with each emission from
+    // shipFire$ and then will cease to be tracked when it strikes canvas bounds
+let playerProjectile$: Observable<Missile[]> = Observable
+    .interval( 1000 / FPS, animationFrame )
+    .withLatestFrom(shipFire$, (_, shipFires: Launch) => shipFires)
+    // We return a collection of missiles at every frame. missileMapScan
+        // filters the collection to those still in the canvas bounds, and
+        // maps over the collection to transform each missile position.
+        // Finally it adds any new missile to the collection
+    .scan(missileMapScan, <MState>{ missiles: <Missile[]>[], mNum: 0 })
+    // get rid of mNum on emit
+    .map(missileState => missileState.missiles)
+    .startWith([]);
 
 /**
  * scene observable to combine all of the observables
  * we want to expose to the scene rendering game observable
  */
-
-let scene$: Observable<Ship> = ship$
-    // need to merge with other observables - asteroids, scour
+let scene$: Observable<Scene> = shipPos$
+    // need to merge with other observables - asteroids, score
         // and produce object w/ prop for each observe
-    .merge();
+    .withLatestFrom(
+        playerProjectile$,
+        (ship: ShipPosition, missiles: Missile[]) => (<Scene>{
+            ship,
+            missiles
+        })
+    );
 
 /**
  * game observable to project to
  * rendering function at fps interval
  */
-
 let game$ = Observable
     .interval(1000 / FPS, animationFrame)
     .withLatestFrom(scene$, (_, scene) => scene)
     .map(scene => (
         {
             ship: {
-                rotation: scene.rotation,
-                center: scene.center,
-                fire: scene.fire
-            }
+                rotation: scene.ship.rotation,
+                center: scene.ship.center
+            },
+            missiles: scene.missiles
         }
     )
     ).subscribe({
