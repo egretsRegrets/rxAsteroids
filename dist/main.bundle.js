@@ -2176,7 +2176,6 @@ document.body.appendChild(canvas);
  * user actions on ship.
  * test for right speed
  */
-var shipTicks$ = _Observable.Observable.interval(1000 / (_consts.FPS / 1.5), _animationFrame.animationFrame);
 // keydown source stream
 var keydown$ = _Observable.Observable.fromEvent(document, 'keydown');
 // pipeline - user input to ship model 
@@ -2264,6 +2263,8 @@ var shipFire$ = pilotInput$.filter(function (input) {
         missileAngle: shipPos.rotation,
         launchNum: launchNum
     };
+}).throttle(function (launch) {
+    return _Observable.Observable.interval(300);
 });
 // These are player shots, a new one will be added with each emission from
 // shipFire$ and then will cease to be tracked when it strikes canvas bounds

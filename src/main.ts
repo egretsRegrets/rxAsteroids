@@ -56,8 +56,6 @@ document.body.appendChild(canvas);
  * user actions on ship.
  * test for right speed
  */
-let shipTicks$: Observable<number> = Observable
-    .interval( 1000 / (FPS / 1.5), animationFrame);
 
 // keydown source stream
 let keydown$: Observable<KeyboardEvent> = Observable
@@ -163,7 +161,8 @@ let shipFire$: Observable<Launch> = pilotInput$
             missileAngle: shipPos.rotation,
             launchNum
         })
-    );
+    )
+    .throttle(launch => Observable.interval(300));
 
 // These are player shots, a new one will be added with each emission from
     // shipFire$ and then will cease to be tracked when it strikes canvas bounds
