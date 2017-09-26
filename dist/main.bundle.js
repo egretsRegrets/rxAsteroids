@@ -2278,9 +2278,13 @@ var playerProjectile$ = _Observable.Observable.interval(1000 / _consts.FPS, _ani
     return missileState.missiles;
 }).startWith([]);
 /**
- * scene observable to combine all of the observables
- * we want to expose to the scene rendering game observable
+ * Asteroids$ observable to model antagonist asteroids.
+ * Should return a collection representing center coords for each
+ * asteroid, as well as angle-of-travel and velocity for each asteroid.
+ * Velocity/angle will be randomly generated as each asteroid is created.
  */
+// scene observable to combine all of the observables
+// we want to expose to the scene rendering game observable
 var scene$ = shipPos$.withLatestFrom(playerProjectile$, function (ship, missiles) {
     return {
         ship: ship,

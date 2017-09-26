@@ -101,6 +101,11 @@ let decel$: Observable<number> = Observable
     .fromEvent(document, 'keyup')
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
     .filter(control => control === 'thrust')
+    // we create a stream from each keyup event
+        // this stream delivers a decel tick to shipThrust every
+        // 300ms, or until accel occurs again.
+        // switchMap only keeps track of vals from the latest innner observable,
+        // the latest decrement countdown
     .switchMap( () => Observable
         .interval(300)
         .map(tick => -.25)
@@ -183,9 +188,15 @@ let playerProjectile$: Observable<Missile[]> = Observable
     .startWith([]);
 
 /**
- * scene observable to combine all of the observables
- * we want to expose to the scene rendering game observable
+ * Asteroids$ observable to model antagonist asteroids.
+ * Should return a collection representing center coords for each
+ * asteroid, as well as angle-of-travel and velocity for each asteroid.
+ * Velocity/angle will be randomly generated as each asteroid is created. 
  */
+
+// scene observable to combine all of the observables
+    // we want to expose to the scene rendering game observable
+ 
 let scene$: Observable<Scene> = shipPos$
     // need to merge with other observables - asteroids, score
         // and produce object w/ prop for each observe
