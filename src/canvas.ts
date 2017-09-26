@@ -50,9 +50,8 @@ function renderMissiles(ctx, missiles: Missile[]) {
         ctx.strokeStyle = '#EEE';
         ctx.beginPath();
         // starting point of projectile line
-        ctx.moveTo(0, -14);
-        ctx.lineTo(0, -22);
-        ctx.closePath();
+        ctx.moveTo(0, -16);
+        ctx.lineTo(0, -24);
         ctx.stroke();
         ctx.restore();
     });

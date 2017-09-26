@@ -37,9 +37,15 @@ export function transformShipCenter (position: ShipPosition, movement: ShipMovem
                 // then rotationAtThrust is equal to the current rotation
         position.rotationAtThrust = movement.shipRotation;
     }
+    // if position.center x or y are out of bounds, convert center to
+        // bounds-wrapped center coords
+    if( !objInBounds(position.center, position.boundsMax) ){
+        position.center = objWrapBounds(position.center, position.boundsMax);
+    }
     position.center.x += movement.shipThrust * Math.sin(position.rotationAtThrust);
     position.center.y += -movement.shipThrust * Math.cos(position.rotationAtThrust);
     position.rotation = movement.shipRotation;
+
     return position;
 }
 
@@ -48,12 +54,13 @@ export function transformShipCenter (position: ShipPosition, movement: ShipMovem
     // add any new missile to missiles.
 export function missileMapScan(mState: MState, latestLaunch: Launch): MState{
     let newMState = mState;
-    /**
-     * add filter for in-bounds here
-     */
     // transform (move) each missile in collection
+        // then filter those missiles, weeding out any that
+        // have left canvas bounds.
     newMState.missiles = newMState.missiles.map(
         missile => missileTransform(missile)
+    ).filter(transformedMissile => 
+        objInBounds(transformedMissile.pos, mState.boundsMax)
     );
     // if the launch number of the latest missile is greater than
         // the missile number (mNum)
@@ -72,8 +79,6 @@ export function missileMapScan(mState: MState, latestLaunch: Launch): MState{
     return newMState;
 }
 
-function missileInBounds() {}
-
 function missileTransform(missile: Missile) {
     missile.pos = {
         x: missile.pos.x += MISSILE_SPD * Math.sin(missile.firingAngle),
@@ -81,3 +86,33 @@ function missileTransform(missile: Missile) {
     };
     return missile;
 }
+
+function objInBounds(pos: Point2d, boundsMax: Point2d) {
+    if(
+        pos.x > 0 && pos.x < boundsMax.x &&
+        pos.y > 0 && pos.y < boundsMax.y
+    ){
+        return true;
+    }
+}
+
+function objWrapBounds(exit: Point2d, max: Point2d) {
+    // define from which axis the ship has gone out of bounds
+    let axes = max.x > exit.x && exit.x > 0 ?
+    {outOfBAxis: 'y', inBAxis: 'x'} :
+    {outOfBAxis: 'x', inBAxis: 'y'};
+    return getReentryCoords(axes.outOfBAxis, axes.inBAxis, max, exit);
+}
+
+function getReentryCoords(outOfBAxis, inBAxis, bounds: Point2d, exitCoords: Point2d): Point2d{
+    let reentryCoords = <Point2d>{};
+    // the reentry value for the axis the ship went out of bounds
+        // from will either equal 0 or the edge of that axis, depending
+        // on whether the ship left at the highest edge, or at 0
+    reentryCoords[outOfBAxis] = exitCoords[outOfBAxis] >= bounds[outOfBAxis] ? 0 : bounds[outOfBAxis];
+    // the reentry value of the axis by which the ship is still in bounds
+        // will be preserved on reentry
+    reentryCoords[inBAxis] = exitCoords[inBAxis];
+    return reentryCoords;
+}
+

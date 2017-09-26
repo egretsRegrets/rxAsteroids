@@ -20,6 +20,7 @@ export interface ShipPosition {
     center: Point2d;
     rotation: number;
     rotationAtThrust: number;
+    boundsMax: Point2d;
 }
 
 export interface Scene {
@@ -41,4 +42,6 @@ export interface Missile {
 export interface MState {
     missiles: Missile[];
     mNum: number;
+    boundsMax: Point2d; 
 }
+

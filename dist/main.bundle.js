@@ -2244,7 +2244,8 @@ _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFra
         y: canvas.height / 2
     },
     rotation: 0,
-    rotationAtThrust: 0
+    rotationAtThrust: 0,
+    boundsMax: { x: canvas.width, y: canvas.height }
 });
 // shipFire$ needs to track the fire key - which will trigger the emission
 // of a new projectile. Each projectile emitted needs to keep track of 
@@ -2268,7 +2269,11 @@ var shipFire$ = pilotInput$.filter(function (input) {
 // shipFire$ and then will cease to be tracked when it strikes canvas bounds
 var playerProjectile$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).withLatestFrom(shipFire$, function (_, shipFires) {
     return shipFires;
-}).scan(_utils.missileMapScan, { missiles: [], mNum: 0 }).map(function (missileState) {
+}).scan(_utils.missileMapScan, {
+    missiles: [],
+    mNum: 0,
+    boundsMax: { x: canvas.width, y: canvas.height }
+}).map(function (missileState) {
     return missileState.missiles;
 }).startWith([]);
 /**
@@ -5780,6 +5785,11 @@ function transformShipCenter(position, movement) {
         // then rotationAtThrust is equal to the current rotation
         position.rotationAtThrust = movement.shipRotation;
     }
+    // if position.center x or y are out of bounds, convert center to
+    // bounds-wrapped center coords
+    if (!objInBounds(position.center, position.boundsMax)) {
+        position.center = objWrapBounds(position.center, position.boundsMax);
+    }
     position.center.x += movement.shipThrust * Math.sin(position.rotationAtThrust);
     position.center.y += -movement.shipThrust * Math.cos(position.rotationAtThrust);
     position.rotation = movement.shipRotation;
@@ -5790,12 +5800,13 @@ function transformShipCenter(position, movement) {
 // add any new missile to missiles.
 function missileMapScan(mState, latestLaunch) {
     var newMState = mState;
-    /**
-     * add filter for in-bounds here
-     */
     // transform (move) each missile in collection
+    // then filter those missiles, weeding out any that
+    // have left canvas bounds.
     newMState.missiles = newMState.missiles.map(function (missile) {
         return missileTransform(missile);
+    }).filter(function (transformedMissile) {
+        return objInBounds(transformedMissile.pos, mState.boundsMax);
     });
     // if the launch number of the latest missile is greater than
     // the missile number (mNum)
@@ -5811,13 +5822,33 @@ function missileMapScan(mState, latestLaunch) {
     }
     return newMState;
 }
-function missileInBounds() {}
 function missileTransform(missile) {
     missile.pos = {
         x: missile.pos.x += _consts.MISSILE_SPD * Math.sin(missile.firingAngle),
         y: missile.pos.y += -_consts.MISSILE_SPD * Math.cos(missile.firingAngle)
     };
     return missile;
+}
+function objInBounds(pos, boundsMax) {
+    if (pos.x > 0 && pos.x < boundsMax.x && pos.y > 0 && pos.y < boundsMax.y) {
+        return true;
+    }
+}
+function objWrapBounds(exit, max) {
+    // define from which axis the ship has gone out of bounds
+    var axes = max.x > exit.x && exit.x > 0 ? { outOfBAxis: 'y', inBAxis: 'x' } : { outOfBAxis: 'x', inBAxis: 'y' };
+    return getReentryCoords(axes.outOfBAxis, axes.inBAxis, max, exit);
+}
+function getReentryCoords(outOfBAxis, inBAxis, bounds, exitCoords) {
+    var reentryCoords = {};
+    // the reentry value for the axis the ship went out of bounds
+    // from will either equal 0 or the edge of that axis, depending
+    // on whether the ship left at the highest edge, or at 0
+    reentryCoords[outOfBAxis] = exitCoords[outOfBAxis] >= bounds[outOfBAxis] ? 0 : bounds[outOfBAxis];
+    // the reentry value of the axis by which the ship is still in bounds
+    // will be preserved on reentry
+    reentryCoords[inBAxis] = exitCoords[inBAxis];
+    return reentryCoords;
 }
 
 /***/ }),
@@ -5872,9 +5903,8 @@ function renderMissiles(ctx, missiles) {
         ctx.strokeStyle = '#EEE';
         ctx.beginPath();
         // starting point of projectile line
-        ctx.moveTo(0, -14);
-        ctx.lineTo(0, -22);
-        ctx.closePath();
+        ctx.moveTo(0, -16);
+        ctx.lineTo(0, -24);
         ctx.stroke();
         ctx.restore();
     });

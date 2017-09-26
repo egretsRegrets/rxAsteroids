@@ -141,7 +141,8 @@ let shipPos$: Observable<ShipPosition> =
             y: canvas.height / 2
         },
         rotation: 0,
-        rotationAtThrust: 0
+        rotationAtThrust: 0,
+        boundsMax: {x: canvas.width, y: canvas.height}
     });
 
 // shipFire$ needs to track the fire key - which will trigger the emission
@@ -173,8 +174,12 @@ let playerProjectile$: Observable<Missile[]> = Observable
         // filters the collection to those still in the canvas bounds, and
         // maps over the collection to transform each missile position.
         // Finally it adds any new missile to the collection
-    .scan(missileMapScan, <MState>{ missiles: <Missile[]>[], mNum: 0 })
-    // get rid of mNum on emit
+    .scan(missileMapScan, <MState>{
+        missiles: <Missile[]>[],
+        mNum: 0,
+        boundsMax: {x: canvas.width, y: canvas.height}
+    })
+    // only emit the missiles collection
     .map(missileState => missileState.missiles)
     .startWith([]);
 
