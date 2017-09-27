@@ -1395,6 +1395,12 @@ var CONTROLS = exports.CONTROLS = {
     39: 'rotate-right',
     32: 'fire'
 };
+var CTRL_KEYCODES = exports.CTRL_KEYCODES = {
+    'thrust': 38,
+    'rotate-left': 37,
+    'rotate-right': 39,
+    'fire': 32
+};
 /**
  * chang THRUST_SPD to ROTATION_NUM, or something
  */
@@ -2178,20 +2184,28 @@ document.body.appendChild(canvas);
  */
 // keydown source stream
 var keydown$ = _Observable.Observable.fromEvent(document, 'keydown');
-// pipeline - user input to ship model 
-// filter only those keyboard inputs we're looking for
-var pilotInput$ = keydown$.map(function (event) {
-    return event.keyCode;
-}).filter(function (keyCode) {
-    if (_consts.CONTROLS[keyCode] !== undefined) {
-        return true;
-    }
-}).map(function (controlCode) {
-    return _consts.CONTROLS[controlCode];
-}).startWith("no-input");
+var keyup$ = _Observable.Observable.fromEvent(document, 'keyup');
+// keep a table/obj of keystate, will change whenever a key is lifted,
+// or pressed from lifted. This allows us to have multiple keys pressed
+// simultaneously.
+var keyStateTbl$ = keydown$.merge(keyup$).filter(function (evt) {
+    return _consts.CONTROLS[evt.keyCode] !== undefined;
+}).scan(_utils.mapKeysDown, {}).startWith({
+    38: false,
+    37: false,
+    39: false,
+    32: false
+});
 // ship rotation changes angle in rad based on left, right keys
-var shipRotation$ = pilotInput$.filter(function (input) {
-    return input === 'rotate-left' || input === 'rotate-right';
+var shipRotation$ =
+/*
+pilotInput$
+.filter(input => input === 'rotate-left' || input === 'rotate-right')
+*/
+keyStateTbl$.filter(function (table) {
+    return table[_consts.CTRL_KEYCODES['rotate-left']] || table[_consts.CTRL_KEYCODES['rotate-right']];
+}).map(function (tbl) {
+    return tbl[_consts.CTRL_KEYCODES['rotate-left']] ? 'rotate-left' : 'rotate-right';
 }).scan(_utils.rotateShip, 0).startWith(0);
 // pressing the thruster key
 // to start acceleration
@@ -2235,8 +2249,8 @@ var shipPos$ =
 // interval either all combined Observables need to have emitted
 // a value, or shipPos$ needs to start with a val. we opt for the
 // first option here; all input observables have startWith(<val>).
-_Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).combineLatest(pilotInput$, shipThrust$, shipRotation$, function (_, pilotInput, shipThrust, shipRotation) {
-    return { pilotInput: pilotInput, shipThrust: shipThrust, shipRotation: shipRotation };
+_Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).combineLatest(keyStateTbl$, shipThrust$, shipRotation$, function (_, keyStateTbl, shipThrust, shipRotation) {
+    return { keyStateTbl: keyStateTbl, shipThrust: shipThrust, shipRotation: shipRotation };
 }).scan(_utils.transformShipCenter, {
     center: {
         x: canvas.width / 2,
@@ -2253,8 +2267,15 @@ _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFra
 // point of the projectile. We also need to keep track of shipPos$ rotation prop
 // at fire, so we can continue to move the projectiles at the angle from which
 // they were fired.
-var shipFire$ = pilotInput$.filter(function (input) {
-    return input === 'fire';
+var shipFire$ =
+/*
+pilotInput$
+.filter(input => input === 'fire')
+*/
+keyStateTbl$.filter(function (table) {
+    return table[_consts.CTRL_KEYCODES['fire']];
+}).map(function (tbl) {
+    return tbl[_consts.CTRL_KEYCODES['fire']];
 }).scan(function (missilesLaunched) {
     return missilesLaunched + 1;
 }, 0).withLatestFrom(shipPos$, function (launchNum, shipPos) {
@@ -5768,6 +5789,7 @@ var WithLatestFromSubscriber = (function (_super) {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.mapKeysDown = mapKeysDown;
 exports.rotateShip = rotateShip;
 exports.resolveThrust = resolveThrust;
 exports.transformShipCenter = transformShipCenter;
@@ -5775,6 +5797,10 @@ exports.missileMapScan = missileMapScan;
 
 var _consts = __webpack_require__(17);
 
+function mapKeysDown(keysDown, e) {
+    keysDown[e.keyCode] = e.type == 'keydown';
+    return keysDown;
+}
 function rotateShip(angle, rotation) {
     return rotation === 'rotate-left' ? angle -= Math.PI / 3 / _consts.THRUST_SPD : angle += Math.PI / 3 / _consts.THRUST_SPD;
 }
@@ -5784,10 +5810,10 @@ function resolveThrust(velocity, acceleration) {
 }
 // center transformation and rotation checks on alternate frames
 function transformShipCenter(position, movement) {
-    if (movement.pilotInput === 'thrust' && position.rotationAtThrust !== movement.shipRotation) {
-        // if the last pilotInput was thrust, and current rotation isn't the same
-        // as the last recorded rotation-at-thrust
-        // then rotationAtThrust is equal to the current rotation
+    // rotation at thrust determines the angle towards which the ship moves
+    // we only want to update this when user is not rotating. This 
+    // will allow player to spin around while they fly forward.
+    if (movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-left']] === false && movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-right']] === false) {
         position.rotationAtThrust = movement.shipRotation;
     }
     // if position.center x or y are out of bounds, convert center to

@@ -8,6 +8,12 @@ export const CONTROLS: Controls = {
     39: 'rotate-right',
     32: 'fire'
 }
+export const CTRL_KEYCODES = {
+    'thrust': 38,
+    'rotate-left': 37,
+    'rotate-right': 39,
+    'fire': 32
+}
 /**
  * chang THRUST_SPD to ROTATION_NUM, or something
  */

@@ -8,12 +8,19 @@ export interface Controls {
     [key: number]: string;
 }
 
+export interface KeysDown {
+    38: boolean;
+    37: boolean;
+    39: boolean;
+    32: boolean;
+}
+
 export type PilotInput = "thrust" | "fire" | "rotate-left" | "rotate-right" | "no-input";
 
 export interface ShipMovement {
-    pilotInput: PilotInput,
-    shipThrust: number,
-    shipRotation: number
+    keyStateTbl: object;
+    shipThrust: number;
+    shipRotation: number;
 }
 
 export interface ShipPosition {

@@ -5,14 +5,21 @@ import {
     ShipMovement,
     Launch,
     Missile,
-    MState
+    MState,
+    KeysDown
 } from './interfaces';
 import {
     THRUST_SPD,
     THRUST_CEIL,
     THRUST_FLOOR,
-    MISSILE_SPD
+    MISSILE_SPD,
+    CTRL_KEYCODES
 } from './consts';
+
+export function mapKeysDown(keysDown: KeysDown, e: KeyboardEvent) {
+    keysDown[e.keyCode] = e.type == 'keydown';
+    return keysDown;
+}
 
 export function rotateShip(angle, rotation) {
     return rotation === 'rotate-left'
@@ -31,10 +38,13 @@ export function resolveThrust(velocity, acceleration) {
 
 // center transformation and rotation checks on alternate frames
 export function transformShipCenter (position: ShipPosition, movement: ShipMovement): ShipPosition {
-    if(movement.pilotInput === 'thrust' && position.rotationAtThrust !== movement.shipRotation) {
-        // if the last pilotInput was thrust, and current rotation isn't the same
-            // as the last recorded rotation-at-thrust
-                // then rotationAtThrust is equal to the current rotation
+    // rotation at thrust determines the angle towards which the ship moves
+        // we only want to update this when user is not rotating. This 
+        // will allow player to spin around while they fly forward.
+    if(
+        movement.keyStateTbl[CTRL_KEYCODES['rotate-left']] === false &&
+        movement.keyStateTbl[CTRL_KEYCODES['rotate-right']] === false
+    ) {
         position.rotationAtThrust = movement.shipRotation;
     }
     // if position.center x or y are out of bounds, convert center to

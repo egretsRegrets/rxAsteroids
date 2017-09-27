@@ -28,10 +28,11 @@ import {
     rotateShip,
     resolveThrust,
     transformShipCenter,
-    missileMapScan
+    missileMapScan,
+    mapKeysDown
 } from './utils';
 import { renderScene } from './canvas';
-import { FPS, CONTROLS, THRUST_SPD } from './consts';
+import { FPS, CONTROLS, THRUST_SPD, CTRL_KEYCODES } from './consts';
 import { 
     ShipPosition,
     Point2d,
@@ -40,7 +41,8 @@ import {
     Scene,
     Launch,
     Missile,
-    MState
+    MState,
+    KeysDown
 } from './interfaces';
 
 // create, append canvas
@@ -58,26 +60,39 @@ document.body.appendChild(canvas);
  */
 
 // keydown source stream
-let keydown$: Observable<KeyboardEvent> = Observable
-    .fromEvent(document, 'keydown');
+let keydown$ = Observable.fromEvent(document, 'keydown');
+let keyup$ = Observable.fromEvent(document, 'keyup');
 
-// pipeline - user input to ship model 
-
-// filter only those keyboard inputs we're looking for
-let pilotInput$: Observable<PilotInput> = keydown$
-    .map((event: KeyboardEvent) => event.keyCode)
-    // only move on if keyCode has an opposite member in CONTROLS
-    .filter((keyCode: number) => {
-        if (CONTROLS[keyCode] !== undefined){
-            return true;
-        }
-    })
-    .map((controlCode) => <PilotInput>CONTROLS[controlCode])
-    .startWith("no-input");
+// keep a table/obj of keystate, will change whenever a key is lifted,
+    // or pressed from lifted. This allows us to have multiple keys pressed
+    // simultaneously.
+let keyStateTbl$ = keydown$.merge(keyup$)
+    .filter((evt: KeyboardEvent) => CONTROLS[evt.keyCode] !== undefined)
+    .scan(mapKeysDown, <KeysDown>{})
+    .startWith(
+        {
+            38: false,
+            37: false,
+            39: false,
+            32: false
+        });
 
 // ship rotation changes angle in rad based on left, right keys
-let shipRotation$: Observable<number> = pilotInput$
+let shipRotation$: Observable<number> = 
+    /*
+    pilotInput$
     .filter(input => input === 'rotate-left' || input === 'rotate-right')
+    */
+    keyStateTbl$
+    .filter(table => 
+        table[CTRL_KEYCODES['rotate-left']] ||
+        table[CTRL_KEYCODES['rotate-right']]
+    )
+    .map(tbl => 
+        tbl[CTRL_KEYCODES['rotate-left']] ?
+        'rotate-left' :
+        'rotate-right'
+    )
     .scan(rotateShip, 0)
     .startWith(0);
 
@@ -134,9 +149,9 @@ let shipPos$: Observable<ShipPosition> =
             // a value, or shipPos$ needs to start with a val. we opt for the
             // first option here; all input observables have startWith(<val>).
     Observable.interval(1000 / FPS, animationFrame)
-    .combineLatest( pilotInput$, shipThrust$, shipRotation$,
-        (_, pilotInput, shipThrust, shipRotation) =>
-        (<ShipMovement>{ pilotInput, shipThrust, shipRotation})
+    .combineLatest( keyStateTbl$, shipThrust$, shipRotation$,
+        (_, keyStateTbl, shipThrust, shipRotation) =>
+        (<ShipMovement>{ keyStateTbl, shipThrust, shipRotation})
     )
     .scan(transformShipCenter, <ShipPosition>{
         center: {
@@ -155,8 +170,14 @@ let shipPos$: Observable<ShipPosition> =
     // point of the projectile. We also need to keep track of shipPos$ rotation prop
     // at fire, so we can continue to move the projectiles at the angle from which
     // they were fired.
-let shipFire$: Observable<Launch> = pilotInput$
+let shipFire$: Observable<Launch> = 
+    /*
+    pilotInput$
     .filter(input => input === 'fire')
+    */
+    keyStateTbl$
+    .filter( table => table[CTRL_KEYCODES['fire']] )
+    .map(tbl => tbl[CTRL_KEYCODES['fire']])
     // update the number of missiles launched / the launch number of the new missile
     .scan((missilesLaunched) => missilesLaunched + 1, 0)
     .withLatestFrom(
