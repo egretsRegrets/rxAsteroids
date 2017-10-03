@@ -5811,9 +5811,9 @@ function resolveThrust(velocity, acceleration) {
 // center transformation and rotation checks on alternate frames
 function transformShipCenter(position, movement) {
     // rotation at thrust determines the angle towards which the ship moves
-    // we only want to update this when user is not rotating. This 
-    // will allow player to spin around while they fly forward.
-    if (movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-left']] === false && movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-right']] === false) {
+    // we only want to update this when user is not rotating, but is thrusting (increasing accel).
+    // This will allow player to spin around while they fly forward.
+    if (movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']] && !movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-left']] && !movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-right']]) {
         position.rotationAtThrust = movement.shipRotation;
     }
     // if position.center x or y are out of bounds, convert center to
