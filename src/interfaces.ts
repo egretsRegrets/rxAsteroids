@@ -32,13 +32,20 @@ export interface ShipPosition {
 
 export interface Scene {
     ship: {center: Point2d, rotation: number},
-    missiles: any
+    missiles: Missile[],
+    asteroids: Asteroid[]
 }
 
 export interface Launch {
     missileStart: Point2d;
     missileAngle: number;
     launchNum: number;
+}
+
+export interface Asteroid{
+    driftAngle: number;
+    center: Point2d;
+    boundsMax: Point2d;
 }
 
 export interface Missile {
@@ -51,4 +58,3 @@ export interface MState {
     mNum: number;
     boundsMax: Point2d; 
 }
-

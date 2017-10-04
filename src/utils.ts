@@ -6,14 +6,17 @@ import {
     Launch,
     Missile,
     MState,
-    KeysDown
+    KeysDown,
+    Asteroid
 } from './interfaces';
 import {
     THRUST_SPD,
     THRUST_CEIL,
     THRUST_FLOOR,
     MISSILE_SPD,
-    CTRL_KEYCODES
+    CTRL_KEYCODES,
+    ASTEROID_SPD,
+    ASTEROID_RADIUS
 } from './consts';
 
 export function mapKeysDown(keysDown: KeysDown, e: KeyboardEvent) {
@@ -90,6 +93,43 @@ export function missileMapScan(mState: MState, latestLaunch: Launch): MState{
     return newMState;
 }
 
+// generate 4 starting asteroids:
+    // we need to generate center coords for each asteroid
+    // as well as angle of drift for each asteroid
+export function generateAsteroid(canvas: HTMLCanvasElement){
+    //let asteroids = Array<Asteroid>(4);
+    let asteroids: Asteroid[] = [
+        <Asteroid>{}, <Asteroid>{}, <Asteroid>{}, <Asteroid>{}
+    ];
+    let newAsteroids = asteroids.map((asteroid: Asteroid, index): Asteroid => {
+        // asteroids generate at random position within the 4 gutters of the
+            // canvas: the area within asteroid radius of 4 canvas edges.
+            // we use radius, so that we can generate asteroids partially
+            // off screen, per arcade original.
+        asteroid.center = assignToGutter(index, canvas);
+        // we set driftAngle as one of four angles:
+            // 45deg, 135deg, 225deg, 315deg - but in radians
+        asteroid.driftAngle = randomAngleOfFour();
+        asteroid.boundsMax = {
+            x: canvas.width,
+            y: canvas.height
+        }
+        return asteroid;
+    });
+    return newAsteroids;
+}
+
+export function transformAsteroids(asteroids: Asteroid[]){
+    return asteroids.map((asteroid: Asteroid): Asteroid => {
+        if ( !objInBounds(asteroid.center, asteroid.boundsMax) ){
+            asteroid.center = objWrapBounds(asteroid.center, asteroid.boundsMax);
+        }
+        asteroid.center.x += ASTEROID_SPD * Math.sin(asteroid.driftAngle);
+        asteroid.center.y -= ASTEROID_SPD * Math.cos(asteroid.driftAngle);
+        return asteroid;
+    });
+}
+
 function missileTransform(missile: Missile) {
     missile.pos = {
         x: missile.pos.x += MISSILE_SPD * Math.sin(missile.firingAngle),
@@ -127,3 +167,50 @@ function getReentryCoords(outOfBAxis, inBAxis, bounds: Point2d, exitCoords: Poin
     return reentryCoords;
 }
 
+function assignToGutter(index, canvas: HTMLCanvasElement): Point2d {
+    // based on index num, provide floor and ceil for given gutter
+    let floor = <Point2d>{}, ceiling = <Point2d>{};
+    // We assign gutters to asteroids in clockwise order, starting at the upper gutter
+    if(index === 0) {
+        floor.y = 0, ceiling.y = ASTEROID_RADIUS;
+        floor.x = 0, ceiling.x = canvas.width;
+    } else if (index === 1) {
+        floor.y = 0, ceiling.y = canvas.height;
+        floor.x = canvas.width - ASTEROID_RADIUS, ceiling.x = canvas.width;
+    } else if (index === 2) {
+        floor.y = canvas.height - ASTEROID_RADIUS, ceiling.y = canvas.height;
+        floor.x = 0, ceiling.x = canvas.width;
+    } else {
+        floor.y = 0, floor.y = 0, ceiling.y = canvas.height;
+        floor.x = 0, ceiling.x = ASTEROID_RADIUS;
+    }
+    return randomCoords(floor, ceiling);
+}
+
+function randomCoords(floor: Point2d, ceiling: Point2d): Point2d {
+    // inclusive floor and ceiling when randomizing
+    return {
+        x: Math.floor(Math.random() * (ceiling.x - floor.x + 1) + floor.x),
+        y: Math.floor(Math.random() * (ceiling.y - floor.y + 1) + floor.y)
+    }
+}
+
+function randomAngleOfFour(){
+    // janky randomization method
+    const seed = Math.random();
+    if(seed > 0 && seed < 0.3){
+        // 45deg to rad
+        return Math.PI/4;
+    }else if(seed > 0.2 && seed < 0.5){
+        // 135deg to rad
+        return 7 * Math.PI/4
+    }else if(seed > 0.4 && seed < 0.7){
+        // 225deg to rad
+        return 5 * Math.PI/4;
+    } else if(seed > 0.6 && seed < 0.9){
+        // 315deg to rad
+        return 3 * Math.PI/4;
+    } else{
+        return randomAngleOfFour();
+    }
+}

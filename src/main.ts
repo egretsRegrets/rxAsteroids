@@ -29,7 +29,9 @@ import {
     resolveThrust,
     transformShipCenter,
     missileMapScan,
-    mapKeysDown
+    mapKeysDown,
+    generateAsteroid,
+    transformAsteroids
 } from './utils';
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, THRUST_SPD, CTRL_KEYCODES } from './consts';
@@ -42,7 +44,8 @@ import {
     Launch,
     Missile,
     MState,
-    KeysDown
+    KeysDown,
+    Asteroid
 } from './interfaces';
 
 // create, append canvas
@@ -214,6 +217,9 @@ let playerProjectile$: Observable<Missile[]> = Observable
  * asteroid, as well as angle-of-travel and velocity for each asteroid.
  * Velocity/angle will be randomly generated as each asteroid is created. 
  */
+let asteroids$: Observable<Asteroid[]> = Observable
+    .interval(1000 / FPS, animationFrame)
+    .scan(transformAsteroids, generateAsteroid(canvas));
 
 // scene observable to combine all of the observables
     // we want to expose to the scene rendering game observable
@@ -222,10 +228,11 @@ let scene$: Observable<Scene> = shipPos$
     // need to merge with other observables - asteroids, score
         // and produce object w/ prop for each observe
     .withLatestFrom(
-        playerProjectile$,
-        (ship: ShipPosition, missiles: Missile[]) => (<Scene>{
+        playerProjectile$, asteroids$,
+        (ship: ShipPosition, missiles: Missile[], asteroids: Asteroid[]) => (<Scene>{
             ship,
-            missiles
+            missiles,
+            asteroids
         })
     );
 
@@ -242,7 +249,8 @@ let game$ = Observable
                 rotation: scene.ship.rotation,
                 center: scene.ship.center
             },
-            missiles: scene.missiles
+            missiles: scene.missiles,
+            asteroids: scene.asteroids
         }
     )
     ).subscribe({

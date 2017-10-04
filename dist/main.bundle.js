@@ -1408,6 +1408,8 @@ var THRUST_SPD = exports.THRUST_SPD = 4.5;
 var THRUST_CEIL = exports.THRUST_CEIL = 1.5;
 var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
 var MISSILE_SPD = exports.MISSILE_SPD = 5;
+var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
+var ASTEROID_RADIUS = exports.ASTEROID_RADIUS = 25;
 /**
  * 2d collection defines vertices of ship,
  * will be offset from pos.x && pos.y in renderShip()
@@ -2304,12 +2306,14 @@ var playerProjectile$ = _Observable.Observable.interval(1000 / _consts.FPS, _ani
  * asteroid, as well as angle-of-travel and velocity for each asteroid.
  * Velocity/angle will be randomly generated as each asteroid is created.
  */
+var asteroids$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).scan(_utils.transformAsteroids, (0, _utils.generateAsteroid)(canvas));
 // scene observable to combine all of the observables
 // we want to expose to the scene rendering game observable
-var scene$ = shipPos$.withLatestFrom(playerProjectile$, function (ship, missiles) {
+var scene$ = shipPos$.withLatestFrom(playerProjectile$, asteroids$, function (ship, missiles, asteroids) {
     return {
         ship: ship,
-        missiles: missiles
+        missiles: missiles,
+        asteroids: asteroids
     };
 });
 /**
@@ -2324,7 +2328,8 @@ var game$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.
             rotation: scene.ship.rotation,
             center: scene.ship.center
         },
-        missiles: scene.missiles
+        missiles: scene.missiles,
+        asteroids: scene.asteroids
     };
 }).subscribe({
     next: function next(scene) {
@@ -5794,6 +5799,8 @@ exports.rotateShip = rotateShip;
 exports.resolveThrust = resolveThrust;
 exports.transformShipCenter = transformShipCenter;
 exports.missileMapScan = missileMapScan;
+exports.generateAsteroid = generateAsteroid;
+exports.transformAsteroids = transformAsteroids;
 
 var _consts = __webpack_require__(17);
 
@@ -5853,6 +5860,39 @@ function missileMapScan(mState, latestLaunch) {
     }
     return newMState;
 }
+// generate 4 starting asteroids:
+// we need to generate center coords for each asteroid
+// as well as angle of drift for each asteroid
+function generateAsteroid(canvas) {
+    //let asteroids = Array<Asteroid>(4);
+    var asteroids = [{}, {}, {}, {}];
+    var newAsteroids = asteroids.map(function (asteroid, index) {
+        // asteroids generate at random position within the 4 gutters of the
+        // canvas: the area within asteroid radius of 4 canvas edges.
+        // we use radius, so that we can generate asteroids partially
+        // off screen, per arcade original.
+        asteroid.center = assignToGutter(index, canvas);
+        // we set driftAngle as one of four angles:
+        // 45deg, 135deg, 225deg, 315deg - but in radians
+        asteroid.driftAngle = randomAngleOfFour();
+        asteroid.boundsMax = {
+            x: canvas.width,
+            y: canvas.height
+        };
+        return asteroid;
+    });
+    return newAsteroids;
+}
+function transformAsteroids(asteroids) {
+    return asteroids.map(function (asteroid) {
+        if (!objInBounds(asteroid.center, asteroid.boundsMax)) {
+            asteroid.center = objWrapBounds(asteroid.center, asteroid.boundsMax);
+        }
+        asteroid.center.x += _consts.ASTEROID_SPD * Math.sin(asteroid.driftAngle);
+        asteroid.center.y -= _consts.ASTEROID_SPD * Math.cos(asteroid.driftAngle);
+        return asteroid;
+    });
+}
 function missileTransform(missile) {
     missile.pos = {
         x: missile.pos.x += _consts.MISSILE_SPD * Math.sin(missile.firingAngle),
@@ -5881,6 +5921,52 @@ function getReentryCoords(outOfBAxis, inBAxis, bounds, exitCoords) {
     reentryCoords[inBAxis] = exitCoords[inBAxis];
     return reentryCoords;
 }
+function assignToGutter(index, canvas) {
+    // based on index num, provide floor and ceil for given gutter
+    var floor = {},
+        ceiling = {};
+    // We assign gutters to asteroids in clockwise order, starting at the upper gutter
+    if (index === 0) {
+        floor.y = 0, ceiling.y = _consts.ASTEROID_RADIUS;
+        floor.x = 0, ceiling.x = canvas.width;
+    } else if (index === 1) {
+        floor.y = 0, ceiling.y = canvas.height;
+        floor.x = canvas.width - _consts.ASTEROID_RADIUS, ceiling.x = canvas.width;
+    } else if (index === 2) {
+        floor.y = canvas.height - _consts.ASTEROID_RADIUS, ceiling.y = canvas.height;
+        floor.x = 0, ceiling.x = canvas.width;
+    } else {
+        floor.y = 0, floor.y = 0, ceiling.y = canvas.height;
+        floor.x = 0, ceiling.x = _consts.ASTEROID_RADIUS;
+    }
+    return randomCoords(floor, ceiling);
+}
+function randomCoords(floor, ceiling) {
+    // inclusive floor and ceiling when randomizing
+    return {
+        x: Math.floor(Math.random() * (ceiling.x - floor.x + 1) + floor.x),
+        y: Math.floor(Math.random() * (ceiling.y - floor.y + 1) + floor.y)
+    };
+}
+function randomAngleOfFour() {
+    // janky randomization method
+    var seed = Math.random();
+    if (seed > 0 && seed < 0.3) {
+        // 45deg to rad
+        return Math.PI / 4;
+    } else if (seed > 0.2 && seed < 0.5) {
+        // 135deg to rad
+        return 7 * Math.PI / 4;
+    } else if (seed > 0.4 && seed < 0.7) {
+        // 225deg to rad
+        return 5 * Math.PI / 4;
+    } else if (seed > 0.6 && seed < 0.9) {
+        // 315deg to rad
+        return 3 * Math.PI / 4;
+    } else {
+        return randomAngleOfFour();
+    }
+}
 
 /***/ }),
 /* 88 */
@@ -5902,6 +5988,7 @@ function renderScene(canvas, ctx, scene) {
     renderBackground(canvas, ctx);
     renderShip(ctx, scene.ship);
     renderMissiles(ctx, scene.missiles);
+    renderAsteroids(ctx, scene.asteroids);
 }
 function renderBackground(canvas, ctx) {
     ctx.fillStyle = '#000';
@@ -5936,6 +6023,21 @@ function renderMissiles(ctx, missiles) {
         // starting point of projectile line
         ctx.moveTo(0, -16);
         ctx.lineTo(0, -24);
+        ctx.stroke();
+        ctx.restore();
+    });
+}
+function renderAsteroids(ctx, asteroids) {
+    asteroids.forEach(function (asteroid) {
+        ctx.save();
+        ctx.translate(asteroid.center.x, asteroid.center.y);
+        ctx.strokeStyle = '#EEE';
+        ctx.beginPath();
+        ctx.moveTo(-_consts.ASTEROID_RADIUS, -_consts.ASTEROID_RADIUS);
+        ctx.lineTo(-_consts.ASTEROID_RADIUS, _consts.ASTEROID_RADIUS);
+        ctx.lineTo(_consts.ASTEROID_RADIUS, _consts.ASTEROID_RADIUS);
+        ctx.lineTo(_consts.ASTEROID_RADIUS, -_consts.ASTEROID_RADIUS);
+        ctx.closePath();
         ctx.stroke();
         ctx.restore();
     });
