@@ -9,7 +9,8 @@ import {
 import { 
     THRUST_SPD,
     SHIP_VERT,
-    ASTEROID_RADIUS
+    ASTEROID_RADIUS,
+    ASTEROID_PATHS
 } from './consts';
 
 let posX = window.innerWidth / 2;
@@ -69,12 +70,43 @@ function renderAsteroids(ctx: CanvasRenderingContext2D, asteroids: Asteroid[]) {
         ctx.translate(asteroid.center.x, asteroid.center.y);
         ctx.strokeStyle = '#EEE';
         ctx.beginPath();
+        // path for square asteroid
+        /*
         ctx.moveTo(-ASTEROID_RADIUS, -ASTEROID_RADIUS);
         ctx.lineTo(-ASTEROID_RADIUS, ASTEROID_RADIUS);
         ctx.lineTo(ASTEROID_RADIUS, ASTEROID_RADIUS);
         ctx.lineTo(ASTEROID_RADIUS, -ASTEROID_RADIUS);
+        */
+        drawAsteroidOutline(ctx, asteroid.outlineType);
         ctx.closePath();
         ctx.stroke();
         ctx.restore();
     });
+}
+
+function drawAsteroidOutline(ctx: CanvasRenderingContext2D, outlineType) {
+    ASTEROID_PATHS[outlineType].forEach((coordSet, index) => {
+        if(index === 0){
+            ctx.moveTo(coordSet[0], coordSet[1]);
+        } else {
+            ctx.lineTo(coordSet[0], coordSet[1]);
+        }
+    });
+}
+
+function drawText(
+    ctx: CanvasRenderingContext2D,
+    text,
+    startX,
+    startY,
+    fillStyle,
+    fontSize,
+    horizontalAlign = 'center',
+    verticalAlign = 'middle'
+) {
+    ctx.fillStyle = fillStyle;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = horizontalAlign;
+    ctx.textBaseline = verticalAlign;
+    ctx.fillText(text, startX, startY);
 }

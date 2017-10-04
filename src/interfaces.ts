@@ -46,6 +46,7 @@ export interface Asteroid{
     driftAngle: number;
     center: Point2d;
     boundsMax: Point2d;
+    outlineType: 'A' | 'B' | 'C' | 'D';
 }
 
 export interface Missile {

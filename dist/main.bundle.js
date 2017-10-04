@@ -1409,7 +1409,7 @@ var THRUST_CEIL = exports.THRUST_CEIL = 1.5;
 var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
 var MISSILE_SPD = exports.MISSILE_SPD = 5;
 var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
-var ASTEROID_RADIUS = exports.ASTEROID_RADIUS = 25;
+var ASTEROID_RADIUS = exports.ASTEROID_RADIUS = 35;
 /**
  * 2d collection defines vertices of ship,
  * will be offset from pos.x && pos.y in renderShip()
@@ -1421,6 +1421,13 @@ var SHIP_VERT = exports.SHIP_VERT = [
 [-10, 0],
 // east v
 [10, 0]];
+var ASTEROID_PATHS = exports.ASTEROID_PATHS = {
+    'square': [[-ASTEROID_RADIUS, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS], [ASTEROID_RADIUS, -ASTEROID_RADIUS]],
+    'A': [[0, -ASTEROID_RADIUS / 1.7], [-ASTEROID_RADIUS / 2, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.3, ASTEROID_RADIUS / 1.2], [ASTEROID_RADIUS / 2, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [ASTEROID_RADIUS / 1.5, 0], [ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [ASTEROID_RADIUS / 2, -ASTEROID_RADIUS]],
+    'B': [[10, -ASTEROID_RADIUS / 1.3], [-ASTEROID_RADIUS / 1.8, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.6, 0], [-ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.8, ASTEROID_RADIUS], [-ASTEROID_RADIUS / 2, ASTEROID_RADIUS / 1.3], [ASTEROID_RADIUS / 1.8, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS / 2.5], [ASTEROID_RADIUS / 2.2, -ASTEROID_RADIUS / 2.8], [ASTEROID_RADIUS / 1.1, -ASTEROID_RADIUS / 1.8], [ASTEROID_RADIUS / 2.2, -ASTEROID_RADIUS]],
+    'C': [[-5, -ASTEROID_RADIUS / 1.6], [-ASTEROID_RADIUS / 2, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.6, 0], [-ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 2, ASTEROID_RADIUS], [-ASTEROID_RADIUS / 2.8, ASTEROID_RADIUS / 1.4], [ASTEROID_RADIUS / 1.8, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS / 2.5], [ASTEROID_RADIUS / 1.4, -ASTEROID_RADIUS / 1.5], [ASTEROID_RADIUS, -ASTEROID_RADIUS], [ASTEROID_RADIUS / 1.5, -ASTEROID_RADIUS]],
+    'D': [[0, -ASTEROID_RADIUS / 1.3], [-ASTEROID_RADIUS / 2.8, -ASTEROID_RADIUS / 1.3], [-ASTEROID_RADIUS, -ASTEROID_RADIUS / 2.5], [-ASTEROID_RADIUS / 1.4, ASTEROID_RADIUS / 1.8], [-ASTEROID_RADIUS / 1.8, ASTEROID_RADIUS / 1.8], [ASTEROID_RADIUS / 2, ASTEROID_RADIUS], [ASTEROID_RADIUS / 1.5, ASTEROID_RADIUS / 2], [ASTEROID_RADIUS, 0], [ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [ASTEROID_RADIUS / 2, -ASTEROID_RADIUS]]
+};
 
 /***/ }),
 /* 18 */
@@ -5874,11 +5881,14 @@ function generateAsteroid(canvas) {
         asteroid.center = assignToGutter(index, canvas);
         // we set driftAngle as one of four angles:
         // 45deg, 135deg, 225deg, 315deg - but in radians
-        asteroid.driftAngle = randomAngleOfFour();
+        asteroid.driftAngle = asteroidAngleOfFour(randomOfFour());
         asteroid.boundsMax = {
             x: canvas.width,
             y: canvas.height
         };
+        // we'll have four different asteroid outline shapes,
+        // so assign a random outline type
+        asteroid.outlineType = asteroidShapeOfFour(randomOfFour());
         return asteroid;
     });
     return newAsteroids;
@@ -5948,23 +5958,49 @@ function randomCoords(floor, ceiling) {
         y: Math.floor(Math.random() * (ceiling.y - floor.y + 1) + floor.y)
     };
 }
-function randomAngleOfFour() {
+function randomOfFour() {
     // janky randomization method
     var seed = Math.random();
     if (seed > 0 && seed < 0.3) {
+        return 1;
+    } else if (seed > 0.2 && seed < 0.5) {
+        return 2;
+    } else if (seed > 0.4 && seed < 0.7) {
+        return 3;
+    } else if (seed > 0.6 && seed < 0.9) {
+        return 4;
+    } else {
+        return randomOfFour();
+    }
+}
+function asteroidAngleOfFour(seed) {
+    if (seed === 1) {
         // 45deg to rad
         return Math.PI / 4;
-    } else if (seed > 0.2 && seed < 0.5) {
+    } else if (seed === 2) {
         // 135deg to rad
         return 7 * Math.PI / 4;
-    } else if (seed > 0.4 && seed < 0.7) {
+    } else if (seed === 3) {
         // 225deg to rad
         return 5 * Math.PI / 4;
-    } else if (seed > 0.6 && seed < 0.9) {
+    } else if (seed === 4) {
         // 315deg to rad
         return 3 * Math.PI / 4;
-    } else {
-        return randomAngleOfFour();
+    }
+}
+function asteroidShapeOfFour(seed) {
+    if (seed === 1) {
+        // 45deg to rad
+        return 'A';
+    } else if (seed === 2) {
+        // 135deg to rad
+        return 'B';
+    } else if (seed === 3) {
+        // 225deg to rad
+        return 'C';
+    } else if (seed === 4) {
+        // 315deg to rad
+        return 'D';
     }
 }
 
@@ -6033,14 +6069,37 @@ function renderAsteroids(ctx, asteroids) {
         ctx.translate(asteroid.center.x, asteroid.center.y);
         ctx.strokeStyle = '#EEE';
         ctx.beginPath();
-        ctx.moveTo(-_consts.ASTEROID_RADIUS, -_consts.ASTEROID_RADIUS);
-        ctx.lineTo(-_consts.ASTEROID_RADIUS, _consts.ASTEROID_RADIUS);
-        ctx.lineTo(_consts.ASTEROID_RADIUS, _consts.ASTEROID_RADIUS);
-        ctx.lineTo(_consts.ASTEROID_RADIUS, -_consts.ASTEROID_RADIUS);
+        // path for square asteroid
+        /*
+        ctx.moveTo(-ASTEROID_RADIUS, -ASTEROID_RADIUS);
+        ctx.lineTo(-ASTEROID_RADIUS, ASTEROID_RADIUS);
+        ctx.lineTo(ASTEROID_RADIUS, ASTEROID_RADIUS);
+        ctx.lineTo(ASTEROID_RADIUS, -ASTEROID_RADIUS);
+        */
+        drawAsteroidOutline(ctx, asteroid.outlineType);
         ctx.closePath();
         ctx.stroke();
         ctx.restore();
     });
+}
+function drawAsteroidOutline(ctx, outlineType) {
+    _consts.ASTEROID_PATHS[outlineType].forEach(function (coordSet, index) {
+        if (index === 0) {
+            ctx.moveTo(coordSet[0], coordSet[1]);
+        } else {
+            ctx.lineTo(coordSet[0], coordSet[1]);
+        }
+    });
+}
+function drawText(ctx, text, startX, startY, fillStyle, fontSize) {
+    var horizontalAlign = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 'center';
+    var verticalAlign = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 'middle';
+
+    ctx.fillStyle = fillStyle;
+    ctx.font = 'bold ' + fontSize + 'px sans-serif';
+    ctx.textAlign = horizontalAlign;
+    ctx.textBaseline = verticalAlign;
+    ctx.fillText(text, startX, startY);
 }
 
 /***/ })

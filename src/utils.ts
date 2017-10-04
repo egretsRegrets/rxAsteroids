@@ -109,11 +109,14 @@ export function generateAsteroid(canvas: HTMLCanvasElement){
         asteroid.center = assignToGutter(index, canvas);
         // we set driftAngle as one of four angles:
             // 45deg, 135deg, 225deg, 315deg - but in radians
-        asteroid.driftAngle = randomAngleOfFour();
+        asteroid.driftAngle = asteroidAngleOfFour(randomOfFour());
         asteroid.boundsMax = {
             x: canvas.width,
             y: canvas.height
         }
+        // we'll have four different asteroid outline shapes,
+            // so assign a random outline type
+        asteroid.outlineType = asteroidShapeOfFour(randomOfFour());
         return asteroid;
     });
     return newAsteroids;
@@ -195,22 +198,50 @@ function randomCoords(floor: Point2d, ceiling: Point2d): Point2d {
     }
 }
 
-function randomAngleOfFour(){
+function randomOfFour(){
     // janky randomization method
     const seed = Math.random();
     if(seed > 0 && seed < 0.3){
+        return 1;
+    }else if(seed > 0.2 && seed < 0.5){
+        return 2;
+    }else if(seed > 0.4 && seed < 0.7){
+        return 3;
+    } else if(seed > 0.6 && seed < 0.9){
+        return 4;
+    } else{
+        return randomOfFour();
+    }
+}
+
+function asteroidAngleOfFour(seed: 1 | 2 | 3 | 4){
+    if(seed === 1){
         // 45deg to rad
         return Math.PI/4;
-    }else if(seed > 0.2 && seed < 0.5){
+    }else if(seed === 2){
         // 135deg to rad
-        return 7 * Math.PI/4
-    }else if(seed > 0.4 && seed < 0.7){
+        return 7 * Math.PI/4;
+    }else if(seed === 3){
         // 225deg to rad
         return 5 * Math.PI/4;
-    } else if(seed > 0.6 && seed < 0.9){
+    } else if(seed === 4){
         // 315deg to rad
         return 3 * Math.PI/4;
-    } else{
-        return randomAngleOfFour();
+    }
+}
+
+function asteroidShapeOfFour(seed: 1 | 2 | 3 | 4) {
+    if(seed === 1){
+        // 45deg to rad
+        return 'A';
+    }else if(seed === 2){
+        // 135deg to rad
+        return 'B';
+    }else if(seed === 3){
+        // 225deg to rad
+        return 'C';
+    } else if(seed === 4){
+        // 315deg to rad
+        return 'D';
     }
 }
