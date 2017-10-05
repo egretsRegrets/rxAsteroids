@@ -1401,20 +1401,22 @@ var CTRL_KEYCODES = exports.CTRL_KEYCODES = {
     'rotate-right': 39,
     'fire': 32
 };
-var THRUST_CEIL = exports.THRUST_CEIL = 1.5;
-var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
+var THRUST_CEIL = exports.THRUST_CEIL = 2.5;
+var THRUST_FLOOR = exports.THRUST_FLOOR = .75;
 var ROTATION_INCREMENT = exports.ROTATION_INCREMENT = 4.5;
 var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
 var MISSILE_SPD = exports.MISSILE_SPD = 5;
 // 2d collection defines vertices of ship,
 // will be offset from pos.x && pos.y in renderShip()
-var SHIP_VERT = exports.SHIP_VERT = [
-// north v
+var SHIP_PATH = exports.SHIP_PATH = [
+// north point
 [0, -10],
-// west v
-[-10, 0],
-// east v
-[10, 0]];
+// west point
+[-10, 10],
+// south point - tuck between west/east points
+[0, 5],
+// east point
+[10, 10]];
 var ASTEROID_RADIUS = exports.ASTEROID_RADIUS = 35;
 // collection of points making up the various paths
 // of asteroid outline types
@@ -2221,7 +2223,7 @@ var accel$ = _Observable.Observable.fromEvent(document, 'keydown').map(function 
 }).map(function (accelInput) {
     return .25;
 }).throttle(function (val) {
-    return _Observable.Observable.interval(50);
+    return _Observable.Observable.interval(30);
 });
 // letting off thruster key
 // to trigger deceleration
@@ -2235,7 +2237,7 @@ var decel$ = _Observable.Observable.fromEvent(document, 'keyup').map(function (e
     return control === 'thrust';
 }).switchMap(function () {
     return _Observable.Observable.interval(300).map(function (tick) {
-        return -.25;
+        return -.125;
     }).takeUntil(accel$);
 });
 /**
@@ -5813,8 +5815,22 @@ function rotateShip(angle, rotation) {
     return rotation === 'rotate-left' ? angle -= Math.PI / 3 / _consts.ROTATION_INCREMENT : angle += Math.PI / 3 / _consts.ROTATION_INCREMENT;
 }
 function resolveThrust(velocity, acceleration) {
-    // allow accelerate up to THRUST_CEIL and as low as 0
-    return velocity + acceleration <= _consts.THRUST_CEIL && velocity + acceleration >= _consts.THRUST_FLOOR ? velocity + acceleration : velocity;
+    // if new velocity is higher than floor and less than ceiling
+    // then make velocity equal the sum of velocity and accel
+    if (velocity + acceleration >= _consts.THRUST_FLOOR && velocity + acceleration <= _consts.THRUST_CEIL) {
+        return velocity + acceleration;
+    } else if (velocity < _consts.THRUST_FLOOR && velocity + acceleration < _consts.THRUST_FLOOR) {
+        // make sure we don't decel below a given velocity
+        // while we are under floor
+        if (acceleration < 0) {
+            return velocity;
+        }
+        return velocity + acceleration;
+    } else if (velocity >= _consts.THRUST_FLOOR && velocity + acceleration < _consts.THRUST_FLOOR) {
+        return _consts.THRUST_FLOOR;
+    } else if (velocity + acceleration > _consts.THRUST_CEIL) {
+        return _consts.THRUST_CEIL;
+    }
 }
 // center transformation and rotation checks on alternate frames
 function transformShipCenter(position, movement) {
@@ -6030,6 +6046,13 @@ function renderBackground(canvas, ctx) {
 }
 function renderShip(ctx, ship) {
     var angle = ship.rotation;
+    // draw cockpit circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ship.center.x, ship.center.y, 4.75, 0, 2 * Math.PI, false);
+    ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
+    ctx.stroke();
+    ctx.restore();
     // defining ship triangle
     ctx.save();
     ctx.translate(ship.center.x, ship.center.y);
@@ -6037,11 +6060,12 @@ function renderShip(ctx, ship) {
     ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
     // pre-drawing positioning
     ctx.beginPath();
-    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
-    ctx.moveTo(_consts.SHIP_VERT[0][0], _consts.SHIP_VERT[0][1]);
+    // SHIP_PATH are fixed in reference to ship.center.x and ship.center.y
+    ctx.moveTo(_consts.SHIP_PATH[0][0], _consts.SHIP_PATH[0][1]);
     // begin drawing
-    ctx.lineTo(_consts.SHIP_VERT[1][0], _consts.SHIP_VERT[1][1]);
-    ctx.lineTo(_consts.SHIP_VERT[2][0], _consts.SHIP_VERT[2][1]);
+    ctx.lineTo(_consts.SHIP_PATH[1][0], _consts.SHIP_PATH[1][1]);
+    ctx.lineTo(_consts.SHIP_PATH[2][0], _consts.SHIP_PATH[2][1]);
+    ctx.lineTo(_consts.SHIP_PATH[3][0], _consts.SHIP_PATH[3][1]);
     ctx.closePath();
     ctx.stroke();
     ctx.restore();

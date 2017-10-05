@@ -8,7 +8,7 @@ import {
 } from './interfaces';
 import { 
     ROTATION_INCREMENT,
-    SHIP_VERT,
+    SHIP_PATH,
     ASTEROID_RADIUS,
     ASTEROID_OUTLINE_PATHS
 } from './consts';
@@ -34,6 +34,13 @@ function renderBackground(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext
 
 function renderShip(ctx: CanvasRenderingContext2D, ship) {
     let angle = ship.rotation;
+    // draw cockpit circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ship.center.x, ship.center.y, 4.75, 0, 2 * Math.PI, false);
+    ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
+    ctx.stroke();
+    ctx.restore();
     // defining ship triangle
     ctx.save();
     ctx.translate(ship.center.x, ship.center.y);
@@ -41,11 +48,12 @@ function renderShip(ctx: CanvasRenderingContext2D, ship) {
     ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
     // pre-drawing positioning
     ctx.beginPath();
-    // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
-    ctx.moveTo(SHIP_VERT[0][0], SHIP_VERT[0][1]);
+    // SHIP_PATH are fixed in reference to ship.center.x and ship.center.y
+    ctx.moveTo(SHIP_PATH[0][0], SHIP_PATH[0][1]);
     // begin drawing
-    ctx.lineTo(SHIP_VERT[1][0], SHIP_VERT[1][1]);
-    ctx.lineTo(SHIP_VERT[2][0], SHIP_VERT[2][1]);
+    ctx.lineTo(SHIP_PATH[1][0], SHIP_PATH[1][1]);
+    ctx.lineTo(SHIP_PATH[2][0], SHIP_PATH[2][1]);
+    ctx.lineTo(SHIP_PATH[3][0], SHIP_PATH[3][1]);
     ctx.closePath();
     ctx.stroke();
     ctx.restore();

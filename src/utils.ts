@@ -31,11 +31,39 @@ export function rotateShip(angle, rotation) {
 }
 
 export function resolveThrust(velocity, acceleration) {
-    // allow accelerate up to THRUST_CEIL and as low as 0
-    return (velocity + acceleration) <= THRUST_CEIL &&
-    (velocity + acceleration) >= THRUST_FLOOR ?
-    velocity + acceleration :
-    velocity;
+    // if new velocity is higher than floor and less than ceiling
+        // then make velocity equal the sum of velocity and accel
+    if ( 
+        velocity + acceleration >= THRUST_FLOOR &&
+        velocity + acceleration <= THRUST_CEIL
+    ){
+        return velocity + acceleration;
+    }
+    // if we haven't yet reached floor speed:
+    else if (
+        velocity < THRUST_FLOOR &&
+        velocity + acceleration < THRUST_FLOOR
+    ){
+        // make sure we don't decel below a given velocity
+            // while we are under floor
+        if(
+            acceleration < 0
+        ){
+            return velocity;
+        }
+        return velocity + acceleration;
+    }
+    // don't go below floor
+    else if (
+        velocity >= THRUST_FLOOR &&
+        velocity + acceleration < THRUST_FLOOR
+    ){
+        return THRUST_FLOOR;
+    }
+    // don't go above ceiling
+    else if (velocity + acceleration > THRUST_CEIL){
+        return THRUST_CEIL;
+    }
 
 }
 

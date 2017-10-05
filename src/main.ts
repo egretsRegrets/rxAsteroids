@@ -106,7 +106,7 @@ let accel$: Observable<number> = Observable
     .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
     .filter(control => control === 'thrust')
     .map(accelInput => .25)
-    .throttle(val => Observable.interval(50));
+    .throttle(val => Observable.interval(30));
     
 
 // letting off thruster key
@@ -126,7 +126,7 @@ let decel$: Observable<number> = Observable
         // the latest decrement countdown
     .switchMap( () => Observable
         .interval(300)
-        .map(tick => -.25)
+        .map(tick => -.125)
         .takeUntil(accel$)
     );
 
