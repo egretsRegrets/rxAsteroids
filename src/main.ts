@@ -34,7 +34,7 @@ import {
     transformAsteroids
 } from './utils';
 import { renderScene } from './canvas';
-import { FPS, CONTROLS, THRUST_SPD, CTRL_KEYCODES } from './consts';
+import { FPS, CONTROLS, ROTATION_INCREMENT, CTRL_KEYCODES } from './consts';
 import { 
     ShipPosition,
     Point2d,
@@ -211,12 +211,11 @@ let playerProjectile$: Observable<Missile[]> = Observable
     .map(missileState => missileState.missiles)
     .startWith([]);
 
-/**
- * Asteroids$ observable to model antagonist asteroids.
- * Should return a collection representing center coords for each
- * asteroid, as well as angle-of-travel and velocity for each asteroid.
- * Velocity/angle will be randomly generated as each asteroid is created. 
- */
+
+ // Asteroids$ observable to model antagonist asteroids.
+    // Returns a collection representing center coords for each
+    // asteroid, as well as angle-of-travel and velocity for each asteroid,
+    // and asteroid outline type - angle and outline type are randomly gen.
 let asteroids$: Observable<Asteroid[]> = Observable
     .interval(1000 / FPS, animationFrame)
     .scan(transformAsteroids, generateAsteroid(canvas));

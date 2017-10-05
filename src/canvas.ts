@@ -7,14 +7,17 @@ import {
     Asteroid
 } from './interfaces';
 import { 
-    THRUST_SPD,
+    ROTATION_INCREMENT,
     SHIP_VERT,
     ASTEROID_RADIUS,
-    ASTEROID_PATHS
+    ASTEROID_OUTLINE_PATHS
 } from './consts';
 
-let posX = window.innerWidth / 2;
-let posY = window.innerHeight / 2;
+const THEME_COLORS = {
+    background_fill: '#3D1F3E',
+    ship_asteroid_stroke: '#F1686E',
+    missile_color: '#FEF6E7'
+};
 
 export function renderScene(canvas, ctx, scene: Scene) {
     renderBackground(canvas, ctx);
@@ -24,7 +27,7 @@ export function renderScene(canvas, ctx, scene: Scene) {
 }
 
 function renderBackground(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = THEME_COLORS.background_fill;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
 }
@@ -35,7 +38,7 @@ function renderShip(ctx: CanvasRenderingContext2D, ship) {
     ctx.save();
     ctx.translate(ship.center.x, ship.center.y);
     ctx.rotate(angle);
-    ctx.strokeStyle = '#EEE';
+    ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
     // pre-drawing positioning
     ctx.beginPath();
     // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
@@ -54,7 +57,7 @@ function renderMissiles(ctx: CanvasRenderingContext2D, missiles: Missile[]) {
         ctx.save();
         ctx.translate(missile.pos.x, missile.pos.y);
         ctx.rotate(missile.firingAngle);
-        ctx.strokeStyle = '#EEE';
+        ctx.strokeStyle = THEME_COLORS.missile_color;
         ctx.beginPath();
         // starting point of projectile line
         ctx.moveTo(0, -16);
@@ -68,15 +71,8 @@ function renderAsteroids(ctx: CanvasRenderingContext2D, asteroids: Asteroid[]) {
     asteroids.forEach(asteroid => {
         ctx.save();
         ctx.translate(asteroid.center.x, asteroid.center.y);
-        ctx.strokeStyle = '#EEE';
+        ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
         ctx.beginPath();
-        // path for square asteroid
-        /*
-        ctx.moveTo(-ASTEROID_RADIUS, -ASTEROID_RADIUS);
-        ctx.lineTo(-ASTEROID_RADIUS, ASTEROID_RADIUS);
-        ctx.lineTo(ASTEROID_RADIUS, ASTEROID_RADIUS);
-        ctx.lineTo(ASTEROID_RADIUS, -ASTEROID_RADIUS);
-        */
         drawAsteroidOutline(ctx, asteroid.outlineType);
         ctx.closePath();
         ctx.stroke();
@@ -85,7 +81,7 @@ function renderAsteroids(ctx: CanvasRenderingContext2D, asteroids: Asteroid[]) {
 }
 
 function drawAsteroidOutline(ctx: CanvasRenderingContext2D, outlineType) {
-    ASTEROID_PATHS[outlineType].forEach((coordSet, index) => {
+    ASTEROID_OUTLINE_PATHS[outlineType].forEach((coordSet, index) => {
         if(index === 0){
             ctx.moveTo(coordSet[0], coordSet[1]);
         } else {

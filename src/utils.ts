@@ -10,7 +10,7 @@ import {
     Asteroid
 } from './interfaces';
 import {
-    THRUST_SPD,
+    ROTATION_INCREMENT,
     THRUST_CEIL,
     THRUST_FLOOR,
     MISSILE_SPD,
@@ -26,8 +26,8 @@ export function mapKeysDown(keysDown: KeysDown, e: KeyboardEvent) {
 
 export function rotateShip(angle, rotation) {
     return rotation === 'rotate-left'
-    ? angle -= (Math.PI / 3) / THRUST_SPD
-    : angle += (Math.PI / 3) / THRUST_SPD;
+    ? angle -= (Math.PI / 3) / ROTATION_INCREMENT
+    : angle += (Math.PI / 3) / ROTATION_INCREMENT;
 }
 
 export function resolveThrust(velocity, acceleration) {

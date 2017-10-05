@@ -14,21 +14,17 @@ export const CTRL_KEYCODES = {
     'rotate-right': 39,
     'fire': 32
 }
-/**
- * chang THRUST_SPD to ROTATION_NUM, or something
- */
-export const THRUST_SPD = 4.5;
+
 export const THRUST_CEIL = 1.5;
 export const THRUST_FLOOR = .25;
-export const MISSILE_SPD = 5;
+export const ROTATION_INCREMENT = 4.5;
+
 export const ASTEROID_SPD = 1;
+export const MISSILE_SPD = 5;
 
-export const ASTEROID_RADIUS = 35;
-
-/**
- * 2d collection defines vertices of ship,
- * will be offset from pos.x && pos.y in renderShip()
- */
+// 2d collection defines vertices of ship,
+    // will be offset from pos.x && pos.y in renderShip()
+ 
 export const SHIP_VERT = [
     // north v
     [0, -10],
@@ -38,13 +34,11 @@ export const SHIP_VERT = [
     [10, 0]
 ];
 
-export const ASTEROID_PATHS = {
-    'square': [
-        [-ASTEROID_RADIUS, -ASTEROID_RADIUS],
-        [-ASTEROID_RADIUS, ASTEROID_RADIUS],
-        [ASTEROID_RADIUS, ASTEROID_RADIUS],
-        [ASTEROID_RADIUS, -ASTEROID_RADIUS]
-    ],
+export const ASTEROID_RADIUS = 35;
+
+// collection of points making up the various paths
+    // of asteroid outline types
+export const ASTEROID_OUTLINE_PATHS = {
     'A': [
         [0, -ASTEROID_RADIUS/1.7],
         [-ASTEROID_RADIUS/2, -ASTEROID_RADIUS],

@@ -1401,19 +1401,13 @@ var CTRL_KEYCODES = exports.CTRL_KEYCODES = {
     'rotate-right': 39,
     'fire': 32
 };
-/**
- * chang THRUST_SPD to ROTATION_NUM, or something
- */
-var THRUST_SPD = exports.THRUST_SPD = 4.5;
 var THRUST_CEIL = exports.THRUST_CEIL = 1.5;
 var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
-var MISSILE_SPD = exports.MISSILE_SPD = 5;
+var ROTATION_INCREMENT = exports.ROTATION_INCREMENT = 4.5;
 var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
-var ASTEROID_RADIUS = exports.ASTEROID_RADIUS = 35;
-/**
- * 2d collection defines vertices of ship,
- * will be offset from pos.x && pos.y in renderShip()
- */
+var MISSILE_SPD = exports.MISSILE_SPD = 5;
+// 2d collection defines vertices of ship,
+// will be offset from pos.x && pos.y in renderShip()
 var SHIP_VERT = exports.SHIP_VERT = [
 // north v
 [0, -10],
@@ -1421,8 +1415,10 @@ var SHIP_VERT = exports.SHIP_VERT = [
 [-10, 0],
 // east v
 [10, 0]];
-var ASTEROID_PATHS = exports.ASTEROID_PATHS = {
-    'square': [[-ASTEROID_RADIUS, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS], [ASTEROID_RADIUS, -ASTEROID_RADIUS]],
+var ASTEROID_RADIUS = exports.ASTEROID_RADIUS = 35;
+// collection of points making up the various paths
+// of asteroid outline types
+var ASTEROID_OUTLINE_PATHS = exports.ASTEROID_OUTLINE_PATHS = {
     'A': [[0, -ASTEROID_RADIUS / 1.7], [-ASTEROID_RADIUS / 2, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.3, ASTEROID_RADIUS / 1.2], [ASTEROID_RADIUS / 2, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [ASTEROID_RADIUS / 1.5, 0], [ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [ASTEROID_RADIUS / 2, -ASTEROID_RADIUS]],
     'B': [[10, -ASTEROID_RADIUS / 1.3], [-ASTEROID_RADIUS / 1.8, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.6, 0], [-ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.8, ASTEROID_RADIUS], [-ASTEROID_RADIUS / 2, ASTEROID_RADIUS / 1.3], [ASTEROID_RADIUS / 1.8, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS / 2.5], [ASTEROID_RADIUS / 2.2, -ASTEROID_RADIUS / 2.8], [ASTEROID_RADIUS / 1.1, -ASTEROID_RADIUS / 1.8], [ASTEROID_RADIUS / 2.2, -ASTEROID_RADIUS]],
     'C': [[-5, -ASTEROID_RADIUS / 1.6], [-ASTEROID_RADIUS / 2, -ASTEROID_RADIUS], [-ASTEROID_RADIUS, -ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 1.6, 0], [-ASTEROID_RADIUS, ASTEROID_RADIUS / 2], [-ASTEROID_RADIUS / 2, ASTEROID_RADIUS], [-ASTEROID_RADIUS / 2.8, ASTEROID_RADIUS / 1.4], [ASTEROID_RADIUS / 1.8, ASTEROID_RADIUS], [ASTEROID_RADIUS, ASTEROID_RADIUS / 2.5], [ASTEROID_RADIUS / 1.4, -ASTEROID_RADIUS / 1.5], [ASTEROID_RADIUS, -ASTEROID_RADIUS], [ASTEROID_RADIUS / 1.5, -ASTEROID_RADIUS]],
@@ -2307,12 +2303,10 @@ var playerProjectile$ = _Observable.Observable.interval(1000 / _consts.FPS, _ani
 }).map(function (missileState) {
     return missileState.missiles;
 }).startWith([]);
-/**
- * Asteroids$ observable to model antagonist asteroids.
- * Should return a collection representing center coords for each
- * asteroid, as well as angle-of-travel and velocity for each asteroid.
- * Velocity/angle will be randomly generated as each asteroid is created.
- */
+// Asteroids$ observable to model antagonist asteroids.
+// Returns a collection representing center coords for each
+// asteroid, as well as angle-of-travel and velocity for each asteroid,
+// and asteroid outline type - angle and outline type are randomly gen.
 var asteroids$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).scan(_utils.transformAsteroids, (0, _utils.generateAsteroid)(canvas));
 // scene observable to combine all of the observables
 // we want to expose to the scene rendering game observable
@@ -5816,7 +5810,7 @@ function mapKeysDown(keysDown, e) {
     return keysDown;
 }
 function rotateShip(angle, rotation) {
-    return rotation === 'rotate-left' ? angle -= Math.PI / 3 / _consts.THRUST_SPD : angle += Math.PI / 3 / _consts.THRUST_SPD;
+    return rotation === 'rotate-left' ? angle -= Math.PI / 3 / _consts.ROTATION_INCREMENT : angle += Math.PI / 3 / _consts.ROTATION_INCREMENT;
 }
 function resolveThrust(velocity, acceleration) {
     // allow accelerate up to THRUST_CEIL and as low as 0
@@ -6018,8 +6012,11 @@ exports.renderScene = renderScene;
 
 var _consts = __webpack_require__(17);
 
-var posX = window.innerWidth / 2;
-var posY = window.innerHeight / 2;
+var THEME_COLORS = {
+    background_fill: '#3D1F3E',
+    ship_asteroid_stroke: '#F1686E',
+    missile_color: '#FEF6E7'
+};
 function renderScene(canvas, ctx, scene) {
     renderBackground(canvas, ctx);
     renderShip(ctx, scene.ship);
@@ -6027,7 +6024,7 @@ function renderScene(canvas, ctx, scene) {
     renderAsteroids(ctx, scene.asteroids);
 }
 function renderBackground(canvas, ctx) {
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = THEME_COLORS.background_fill;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
 }
@@ -6037,7 +6034,7 @@ function renderShip(ctx, ship) {
     ctx.save();
     ctx.translate(ship.center.x, ship.center.y);
     ctx.rotate(angle);
-    ctx.strokeStyle = '#EEE';
+    ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
     // pre-drawing positioning
     ctx.beginPath();
     // SHIP_VERT are standard vertex pos, in reference to pos.x, pos.y
@@ -6054,7 +6051,7 @@ function renderMissiles(ctx, missiles) {
         ctx.save();
         ctx.translate(missile.pos.x, missile.pos.y);
         ctx.rotate(missile.firingAngle);
-        ctx.strokeStyle = '#EEE';
+        ctx.strokeStyle = THEME_COLORS.missile_color;
         ctx.beginPath();
         // starting point of projectile line
         ctx.moveTo(0, -16);
@@ -6067,15 +6064,8 @@ function renderAsteroids(ctx, asteroids) {
     asteroids.forEach(function (asteroid) {
         ctx.save();
         ctx.translate(asteroid.center.x, asteroid.center.y);
-        ctx.strokeStyle = '#EEE';
+        ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
         ctx.beginPath();
-        // path for square asteroid
-        /*
-        ctx.moveTo(-ASTEROID_RADIUS, -ASTEROID_RADIUS);
-        ctx.lineTo(-ASTEROID_RADIUS, ASTEROID_RADIUS);
-        ctx.lineTo(ASTEROID_RADIUS, ASTEROID_RADIUS);
-        ctx.lineTo(ASTEROID_RADIUS, -ASTEROID_RADIUS);
-        */
         drawAsteroidOutline(ctx, asteroid.outlineType);
         ctx.closePath();
         ctx.stroke();
@@ -6083,7 +6073,7 @@ function renderAsteroids(ctx, asteroids) {
     });
 }
 function drawAsteroidOutline(ctx, outlineType) {
-    _consts.ASTEROID_PATHS[outlineType].forEach(function (coordSet, index) {
+    _consts.ASTEROID_OUTLINE_PATHS[outlineType].forEach(function (coordSet, index) {
         if (index === 0) {
             ctx.moveTo(coordSet[0], coordSet[1]);
         } else {
