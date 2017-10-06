@@ -19,9 +19,7 @@ import {
     MISSILE_SPD,
     CTRL_KEYCODES,
     ASTEROID_SPD,
-    ASTEROID_RADIUS/*,
-    SHIP_ANGLES
-    */
+    ASTEROID_RADIUS
 } from './consts';
 
 export function mapKeysDown(keysDown: KeysDown, e: KeyboardEvent) {
@@ -30,19 +28,9 @@ export function mapKeysDown(keysDown: KeysDown, e: KeyboardEvent) {
 }
 
 export function rotateShip(angle, rotation) {
-    /*
-    if (rotation === 'rotate-left') {
-        if( angle === SHIP_ANGLES[0]){
-            return SHIP_ANGLES[SHIP_ANGLES.length - 1];
-        }
-        return SHIP_ANGLES[SHIP_ANGLES.indexOf(angle) - 1];
-    } else {
-        if( angle === SHIP_ANGLES[SHIP_ANGLES.length - 1]){
-            return SHIP_ANGLES[0];
-        }
-        return SHIP_ANGLES[SHIP_ANGLES.indexOf(angle) + 1];
-    }
-    */
+    return rotation === 'rotate-left'
+    ? angle -= (Math.PI / 3) / ROTATION_INCREMENT
+    : angle += (Math.PI / 3) / ROTATION_INCREMENT;
 }
 
 export function resolveThrust(velocity, acceleration) {
@@ -121,7 +109,7 @@ export function transformShipCenter (position: ShipPosition, movement: ShipMovem
             (angularDisplacement: AngularDisplacement) =>
             {
                 if(
-                    position.rotationAtThrust === angularDisplacement.angle ||
+                    (position.rotationAtThrust * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) ||
                     angularDisplacement.velocity > THRUST_FLOOR
                 ){
                     return angularDisplacement;
@@ -132,7 +120,7 @@ export function transformShipCenter (position: ShipPosition, movement: ShipMovem
             // if the new ship rotation is equal to this angle and the user is
                 // accelerating then we increase this velocity
             if(
-                movement.shipRotation === angularDisplacement.angle &&
+                (movement.shipRotation * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) &&
                 movement.keyStateTbl[CTRL_KEYCODES['thrust']]
             ){
                 angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');

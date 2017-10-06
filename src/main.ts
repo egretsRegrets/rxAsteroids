@@ -36,9 +36,7 @@ import {
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, 
     ROTATION_INCREMENT, 
-    CTRL_KEYCODES/*,
-    SHIP_ANGLES
-    */
+    CTRL_KEYCODES
  } from './consts';
 import { 
     AngularDisplacement,
