@@ -1,7 +1,8 @@
 
 import {
-    ShipPosition,
     Point2d,
+    AngularDisplacement,
+    ShipPosition,
     ShipMovement,
     Launch,
     Missile,
@@ -13,6 +14,8 @@ import {
     ROTATION_INCREMENT,
     THRUST_CEIL,
     THRUST_FLOOR,
+    THRUST_ACCEL,
+    THRUST_DECEL,
     MISSILE_SPD,
     CTRL_KEYCODES,
     ASTEROID_SPD,
@@ -69,23 +72,57 @@ export function resolveThrust(velocity, acceleration) {
 
 // center transformation and rotation checks on alternate frames
 export function transformShipCenter (position: ShipPosition, movement: ShipMovement): ShipPosition {
-    // rotation at thrust determines the angle towards which the ship moves
-        // we only want to update this when user is not rotating, but is thrusting (increasing accel).
-        // This will allow player to spin around while they fly forward.
+    
     if(
-        movement.keyStateTbl[CTRL_KEYCODES['thrust']] &&
-        !movement.keyStateTbl[CTRL_KEYCODES['rotate-left']] &&
-        !movement.keyStateTbl[CTRL_KEYCODES['rotate-right']]
+        movement.keyStateTbl[CTRL_KEYCODES['thrust']]
     ) {
         position.rotationAtThrust = movement.shipRotation;
+        // if there is no accel in direction of the current angle,
+            // add the angle to the angularDisplacementTbl with velocity of zero
+        if ( 
+            !position.angularDisplacementTbl.filter(cell => 
+                cell.angle === movement.shipRotation
+            ).length
+        ){
+            position.angularDisplacementTbl.push(
+                {
+                    angle: movement.shipRotation,
+                    velocity: 0
+                }
+            );
+        }
     }
     // if position.center x or y are out of bounds, convert center to
         // bounds-wrapped center coords
     if( !objInBounds(position.center, position.boundsMax) ){
         position.center = objWrapBounds(position.center, position.boundsMax);
     }
-    position.center.x += movement.shipThrust * Math.sin(position.rotationAtThrust);
-    position.center.y += -movement.shipThrust * Math.cos(position.rotationAtThrust);
+    console.log(position.angularDisplacementTbl);
+    position.angularDisplacementTbl = position.angularDisplacementTbl
+        // filter out angleDisplacement where the velocity is === thrust floor,
+            // unless that's the direction we're moving toward,
+            // then we'll preserve velocity at thrust floor.
+        .filter(
+            (angularDisplacement: AngularDisplacement) =>
+            // we have to convert both sides of the angle comparison back to degrees
+            (movement.shipRotation * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) ||
+            angularDisplacement.velocity > THRUST_FLOOR
+        )
+        .map((angularDisplacement: AngularDisplacement) => {
+            // if the new ship rotation is equal to this angle and the user is
+                // accelerating then we increase this velocity
+            if(
+                (movement.shipRotation * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) &&
+                movement.keyStateTbl[CTRL_KEYCODES['thrust']]
+            ){
+                angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');
+            } else{
+                angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'neg');
+            }
+            return angularDisplacement;
+        });
+    position.center.x += resolveShipCenter(position.angularDisplacementTbl, 'x');
+    position.center.y += -resolveShipCenter(position.angularDisplacementTbl, 'y');
     position.rotation = movement.shipRotation;
 
     return position;
@@ -272,4 +309,35 @@ function asteroidShapeOfFour(seed: 1 | 2 | 3 | 4) {
         // 315deg to rad
         return 'D';
     }
+}
+
+function resolveVelocity(velocity: number, accelType: 'pos' | 'neg' ) {
+    if(accelType === 'pos'){
+        // keep velocity under thrust ceiling
+        if(velocity + THRUST_ACCEL >= THRUST_CEIL){
+            return THRUST_CEIL;
+        }
+        // accel by accel rate
+        return velocity + THRUST_ACCEL;
+    } else{
+        // keep velocity above thrust floor
+        if(velocity - THRUST_DECEL <= THRUST_FLOOR){
+            return THRUST_FLOOR;
+        }
+        // decel by decel rate
+        return velocity - THRUST_DECEL;
+    }
+    
+}
+
+function resolveShipCenter(angularDisplacementTbl: AngularDisplacement[], axis: 'x' | 'y') {
+    return angularDisplacementTbl.reduce((accDis, displacementCell: AngularDisplacement) => {
+        let displacement;
+        if(axis === 'x'){
+            displacement = displacementCell.velocity * Math.sin(displacementCell.angle);
+        } else{
+            displacement = displacementCell.velocity * Math.cos(displacementCell.angle);
+        }
+        return accDis + displacement;
+    }, 0)
 }

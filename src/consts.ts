@@ -15,8 +15,10 @@ export const CTRL_KEYCODES = {
     'fire': 32
 }
 
+export const THRUST_ACCEL = .25;
+export const THRUST_DECEL = .125;
 export const THRUST_CEIL = 2.5;
-export const THRUST_FLOOR = .75;
+export const THRUST_FLOOR = .25;
 export const ROTATION_INCREMENT = 4.5;
 
 export const ASTEROID_SPD = 1;

@@ -1401,8 +1401,10 @@ var CTRL_KEYCODES = exports.CTRL_KEYCODES = {
     'rotate-right': 39,
     'fire': 32
 };
+var THRUST_ACCEL = exports.THRUST_ACCEL = .25;
+var THRUST_DECEL = exports.THRUST_DECEL = .125;
 var THRUST_CEIL = exports.THRUST_CEIL = 2.5;
-var THRUST_FLOOR = exports.THRUST_FLOOR = .75;
+var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
 var ROTATION_INCREMENT = exports.ROTATION_INCREMENT = 4.5;
 var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
 var MISSILE_SPD = exports.MISSILE_SPD = 5;
@@ -2214,39 +2216,6 @@ keyStateTbl$.filter(function (table) {
 }).map(function (tbl) {
     return tbl[_consts.CTRL_KEYCODES['rotate-left']] ? 'rotate-left' : 'rotate-right';
 }).scan(_utils.rotateShip, 0).startWith(0);
-// pressing the thruster key
-// to start acceleration
-var accel$ = _Observable.Observable.fromEvent(document, 'keydown').map(function (event) {
-    return _consts.CONTROLS[event.keyCode];
-}).filter(function (control) {
-    return control === 'thrust';
-}).map(function (accelInput) {
-    return .25;
-}).throttle(function (val) {
-    return _Observable.Observable.interval(30);
-});
-// letting off thruster key
-// to trigger deceleration
-/**
- * let's think about throttling decel, so that decel doesn't start
- * right away
- */
-var decel$ = _Observable.Observable.fromEvent(document, 'keyup').map(function (event) {
-    return _consts.CONTROLS[event.keyCode];
-}).filter(function (control) {
-    return control === 'thrust';
-}).switchMap(function () {
-    return _Observable.Observable.interval(300).map(function (tick) {
-        return -.125;
-    }).takeUntil(accel$);
-});
-/**
- * thrust should model acceleration as an integer
- * increasing as the up arrow key is held over time,
- * decreasing for the amount of time it is not depressed,
- * until it reaches 0, which is also its starting point
- */
-var shipThrust$ = _Observable.Observable.merge(accel$, decel$).scan(_utils.resolveThrust).startWith(0).distinctUntilChanged();
 // shipPos$ will keep track of the center of the ship, as well as its rotation,
 // an angle in radians. We also want to store rotation at the time of the 
 // last increase in thrust - this helps us maintain velocity in the direction
@@ -2256,8 +2225,8 @@ var shipPos$ =
 // interval either all combined Observables need to have emitted
 // a value, or shipPos$ needs to start with a val. we opt for the
 // first option here; all input observables have startWith(<val>).
-_Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).combineLatest(keyStateTbl$, shipThrust$, shipRotation$, function (_, keyStateTbl, shipThrust, shipRotation) {
-    return { keyStateTbl: keyStateTbl, shipThrust: shipThrust, shipRotation: shipRotation };
+_Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).combineLatest(keyStateTbl$, shipRotation$, function (_, keyStateTbl, shipRotation) {
+    return { keyStateTbl: keyStateTbl, shipRotation: shipRotation };
 }).scan(_utils.transformShipCenter, {
     center: {
         x: canvas.width / 2,
@@ -2265,7 +2234,8 @@ _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFra
     },
     rotation: 0,
     rotationAtThrust: 0,
-    boundsMax: { x: canvas.width, y: canvas.height }
+    boundsMax: { x: canvas.width, y: canvas.height },
+    angularDisplacementTbl: []
 });
 // shipFire$ needs to track the fire key - which will trigger the emission
 // of a new projectile. Each projectile emitted needs to keep track of 
@@ -5834,19 +5804,42 @@ function resolveThrust(velocity, acceleration) {
 }
 // center transformation and rotation checks on alternate frames
 function transformShipCenter(position, movement) {
-    // rotation at thrust determines the angle towards which the ship moves
-    // we only want to update this when user is not rotating, but is thrusting (increasing accel).
-    // This will allow player to spin around while they fly forward.
-    if (movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']] && !movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-left']] && !movement.keyStateTbl[_consts.CTRL_KEYCODES['rotate-right']]) {
+    if (movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
         position.rotationAtThrust = movement.shipRotation;
+        // if there is no accel in direction of the current angle,
+        // add the angle to the angularDisplacementTbl with velocity of zero
+        if (!position.angularDisplacementTbl.filter(function (cell) {
+            return cell.angle === movement.shipRotation;
+        }).length) {
+            position.angularDisplacementTbl.push({
+                angle: movement.shipRotation,
+                velocity: 0
+            });
+        }
     }
     // if position.center x or y are out of bounds, convert center to
     // bounds-wrapped center coords
     if (!objInBounds(position.center, position.boundsMax)) {
         position.center = objWrapBounds(position.center, position.boundsMax);
     }
-    position.center.x += movement.shipThrust * Math.sin(position.rotationAtThrust);
-    position.center.y += -movement.shipThrust * Math.cos(position.rotationAtThrust);
+    console.log(position.angularDisplacementTbl);
+    position.angularDisplacementTbl = position.angularDisplacementTbl.filter(function (angularDisplacement) {
+        return (
+            // we have to convert both sides of the angle comparison back to degrees
+            movement.shipRotation * 180 / Math.PI === angularDisplacement.angle * 180 / Math.PI || angularDisplacement.velocity > _consts.THRUST_FLOOR
+        );
+    }).map(function (angularDisplacement) {
+        // if the new ship rotation is equal to this angle and the user is
+        // accelerating then we increase this velocity
+        if (movement.shipRotation * 180 / Math.PI === angularDisplacement.angle * 180 / Math.PI && movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
+            angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');
+        } else {
+            angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'neg');
+        }
+        return angularDisplacement;
+    });
+    position.center.x += resolveShipCenter(position.angularDisplacementTbl, 'x');
+    position.center.y += -resolveShipCenter(position.angularDisplacementTbl, 'y');
     position.rotation = movement.shipRotation;
     return position;
 }
@@ -6012,6 +6005,34 @@ function asteroidShapeOfFour(seed) {
         // 315deg to rad
         return 'D';
     }
+}
+function resolveVelocity(velocity, accelType) {
+    if (accelType === 'pos') {
+        // keep velocity under thrust ceiling
+        if (velocity + _consts.THRUST_ACCEL >= _consts.THRUST_CEIL) {
+            return _consts.THRUST_CEIL;
+        }
+        // accel by accel rate
+        return velocity + _consts.THRUST_ACCEL;
+    } else {
+        // keep velocity above thrust floor
+        if (velocity - _consts.THRUST_DECEL <= _consts.THRUST_FLOOR) {
+            return _consts.THRUST_FLOOR;
+        }
+        // decel by decel rate
+        return velocity - _consts.THRUST_DECEL;
+    }
+}
+function resolveShipCenter(angularDisplacementTbl, axis) {
+    return angularDisplacementTbl.reduce(function (accDis, displacementCell) {
+        var displacement = void 0;
+        if (axis === 'x') {
+            displacement = displacementCell.velocity * Math.sin(displacementCell.angle);
+        } else {
+            displacement = displacementCell.velocity * Math.cos(displacementCell.angle);
+        }
+        return accDis + displacement;
+    }, 0);
 }
 
 /***/ }),

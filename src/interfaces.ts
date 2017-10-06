@@ -19,7 +19,6 @@ export type PilotInput = "thrust" | "fire" | "rotate-left" | "rotate-right" | "n
 
 export interface ShipMovement {
     keyStateTbl: object;
-    shipThrust: number;
     shipRotation: number;
 }
 
@@ -28,6 +27,7 @@ export interface ShipPosition {
     rotation: number;
     rotationAtThrust: number;
     boundsMax: Point2d;
+    angularDisplacementTbl: AngularDisplacement[];
 }
 
 export interface Scene {
@@ -57,5 +57,10 @@ export interface Missile {
 export interface MState {
     missiles: Missile[];
     mNum: number;
-    boundsMax: Point2d; 
+    boundsMax: Point2d;
+}
+
+export interface AngularDisplacement {
+    angle: number;
+    velocity: number;
 }

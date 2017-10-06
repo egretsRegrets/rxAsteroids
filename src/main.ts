@@ -36,6 +36,7 @@ import {
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, ROTATION_INCREMENT, CTRL_KEYCODES } from './consts';
 import { 
+    AngularDisplacement,
     ShipPosition,
     Point2d,
     ShipMovement,
@@ -99,49 +100,6 @@ let shipRotation$: Observable<number> =
     .scan(rotateShip, 0)
     .startWith(0);
 
-// pressing the thruster key
-    // to start acceleration
-let accel$: Observable<number> = Observable
-    .fromEvent(document, 'keydown')
-    .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
-    .filter(control => control === 'thrust')
-    .map(accelInput => .25)
-    .throttle(val => Observable.interval(30));
-    
-
-// letting off thruster key
-    // to trigger deceleration
-/**
- * let's think about throttling decel, so that decel doesn't start
- * right away
- */
-let decel$: Observable<number> = Observable
-    .fromEvent(document, 'keyup')
-    .map((event: KeyboardEvent) => CONTROLS[event.keyCode])
-    .filter(control => control === 'thrust')
-    // we create a stream from each keyup event
-        // this stream delivers a decel tick to shipThrust every
-        // 300ms, or until accel occurs again.
-        // switchMap only keeps track of vals from the latest innner observable,
-        // the latest decrement countdown
-    .switchMap( () => Observable
-        .interval(300)
-        .map(tick => -.125)
-        .takeUntil(accel$)
-    );
-
-/**
- * thrust should model acceleration as an integer
- * increasing as the up arrow key is held over time,
- * decreasing for the amount of time it is not depressed,
- * until it reaches 0, which is also its starting point
- */
-let shipThrust$: Observable<number> = Observable
-    .merge(accel$, decel$)
-    .scan(resolveThrust)
-    .startWith(0)
-    .distinctUntilChanged();
-
 // shipPos$ will keep track of the center of the ship, as well as its rotation,
     // an angle in radians. We also want to store rotation at the time of the 
     // last increase in thrust - this helps us maintain velocity in the direction
@@ -152,9 +110,9 @@ let shipPos$: Observable<ShipPosition> =
             // a value, or shipPos$ needs to start with a val. we opt for the
             // first option here; all input observables have startWith(<val>).
     Observable.interval(1000 / FPS, animationFrame)
-    .combineLatest( keyStateTbl$, shipThrust$, shipRotation$,
-        (_, keyStateTbl, shipThrust, shipRotation) =>
-        (<ShipMovement>{ keyStateTbl, shipThrust, shipRotation})
+    .combineLatest( keyStateTbl$, shipRotation$,
+        (_, keyStateTbl, shipRotation) =>
+        (<ShipMovement>{ keyStateTbl, shipRotation})
     )
     .scan(transformShipCenter, <ShipPosition>{
         center: {
@@ -163,7 +121,8 @@ let shipPos$: Observable<ShipPosition> =
         },
         rotation: 0,
         rotationAtThrust: 0,
-        boundsMax: {x: canvas.width, y: canvas.height}
+        boundsMax: {x: canvas.width, y: canvas.height},
+        angularDisplacementTbl: []
     });
 
 // shipFire$ needs to track the fire key - which will trigger the emission
