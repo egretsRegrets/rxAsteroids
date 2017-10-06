@@ -33,50 +33,9 @@ export function rotateShip(angle, rotation) {
     : angle += (Math.PI / 3) / ROTATION_INCREMENT;
 }
 
-export function resolveThrust(velocity, acceleration) {
-    // if new velocity is higher than floor and less than ceiling
-        // then make velocity equal the sum of velocity and accel
-    if ( 
-        velocity + acceleration >= THRUST_FLOOR &&
-        velocity + acceleration <= THRUST_CEIL
-    ){
-        return velocity + acceleration;
-    }
-    // if we haven't yet reached floor speed:
-    else if (
-        velocity < THRUST_FLOOR &&
-        velocity + acceleration < THRUST_FLOOR
-    ){
-        // make sure we don't decel below a given velocity
-            // while we are under floor
-        if(
-            acceleration < 0
-        ){
-            return velocity;
-        }
-        return velocity + acceleration;
-    }
-    // don't go below floor
-    else if (
-        velocity >= THRUST_FLOOR &&
-        velocity + acceleration < THRUST_FLOOR
-    ){
-        return THRUST_FLOOR;
-    }
-    // don't go above ceiling
-    else if (velocity + acceleration > THRUST_CEIL){
-        return THRUST_CEIL;
-    }
-
-}
-
-/**
- * change this function name:
- * too close to transformShipPosition
- */
 // center transformation and rotation checks on alternate frames
-export function transformShipCenter (position: ShipPosition, movement: ShipMovement): ShipPosition {
-    
+export function transformShipPos (position: ShipPosition, movement: ShipMovement): ShipPosition {
+    // suppress thrust input if we're turning:
     if(
         movement.keyStateTbl[CTRL_KEYCODES['thrust']]
     ) {
@@ -120,7 +79,7 @@ export function transformShipCenter (position: ShipPosition, movement: ShipMovem
             // if the new ship rotation is equal to this angle and the user is
                 // accelerating then we increase this velocity
             if(
-                (movement.shipRotation * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) &&
+                (position.rotationAtThrust * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) &&
                 movement.keyStateTbl[CTRL_KEYCODES['thrust']]
             ){
                 angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');

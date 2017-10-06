@@ -26,8 +26,7 @@ import 'rxjs/add/operator/withLatestFrom';
 // same-dir imports
 import { 
     rotateShip,
-    resolveThrust,
-    transformShipCenter,
+    transformShipPos,
     missileMapScan,
     mapKeysDown,
     generateAsteroid,
@@ -85,11 +84,7 @@ let keyStateTbl$ = keydown$.merge(keyup$)
         });
 
 // ship rotation changes angle in rad based on left, right keys
-let shipRotation$: Observable<number> = 
-    /*
-    pilotInput$
-    .filter(input => input === 'rotate-left' || input === 'rotate-right')
-    */
+let shipRotation$: Observable<number> =
     keyStateTbl$
     .filter(table => 
         table[CTRL_KEYCODES['rotate-left']] ||
@@ -117,7 +112,7 @@ let shipPos$: Observable<ShipPosition> =
         (_, keyStateTbl, shipRotation) =>
         (<ShipMovement>{ keyStateTbl, shipRotation})
     )
-    .scan(transformShipCenter, <ShipPosition>{
+    .scan(transformShipPos, <ShipPosition>{
         center: {
             x: canvas.width / 2,
             y: canvas.height / 2
@@ -135,12 +130,9 @@ let shipPos$: Observable<ShipPosition> =
     // point of the projectile. We also need to keep track of shipPos$ rotation prop
     // at fire, so we can continue to move the projectiles at the angle from which
     // they were fired.
-let shipFire$: Observable<Launch> = 
-    /*
-    pilotInput$
-    .filter(input => input === 'fire')
-    */
-    keyStateTbl$
+let shipFire$: Observable<Launch> = Observable
+    .interval(1000 / FPS, animationFrame)
+    .withLatestFrom(keyStateTbl$, (_, keyStateTbl) => keyStateTbl)
     .filter( table => table[CTRL_KEYCODES['fire']] )
     .map(tbl => tbl[CTRL_KEYCODES['fire']])
     // update the number of missiles launched / the launch number of the new missile
@@ -153,7 +145,7 @@ let shipFire$: Observable<Launch> =
             launchNum
         })
     )
-    .throttle(launch => Observable.interval(300));
+    .throttle(launch => Observable.interval(200));
 
 // These are player shots, a new one will be added with each emission from
     // shipFire$ and then will cease to be tracked when it strikes canvas bounds

@@ -1403,11 +1403,11 @@ var CTRL_KEYCODES = exports.CTRL_KEYCODES = {
 };
 var THRUST_ACCEL = exports.THRUST_ACCEL = .0625;
 var THRUST_DECEL = exports.THRUST_DECEL = .0078125;
-var THRUST_CEIL = exports.THRUST_CEIL = 3;
+var THRUST_CEIL = exports.THRUST_CEIL = 2.5;
 var THRUST_FLOOR = exports.THRUST_FLOOR = .5;
-var ROTATION_INCREMENT = exports.ROTATION_INCREMENT = 4.5;
+var ROTATION_INCREMENT = exports.ROTATION_INCREMENT = 3;
 var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
-var MISSILE_SPD = exports.MISSILE_SPD = 5;
+var MISSILE_SPD = exports.MISSILE_SPD = 12;
 // 2d collection defines points of ship outline,
 // will be offset from pos.x && pos.y in renderShip()
 var SHIP_PATH = exports.SHIP_PATH = [
@@ -2206,12 +2206,7 @@ var keyStateTbl$ = keydown$.merge(keyup$).filter(function (evt) {
     32: false
 });
 // ship rotation changes angle in rad based on left, right keys
-var shipRotation$ =
-/*
-pilotInput$
-.filter(input => input === 'rotate-left' || input === 'rotate-right')
-*/
-keyStateTbl$.filter(function (table) {
+var shipRotation$ = keyStateTbl$.filter(function (table) {
     return table[_consts.CTRL_KEYCODES['rotate-left']] || table[_consts.CTRL_KEYCODES['rotate-right']];
 }).map(function (tbl) {
     return tbl[_consts.CTRL_KEYCODES['rotate-left']] ? 'rotate-left' : 'rotate-right';
@@ -2227,7 +2222,7 @@ var shipPos$ =
 // first option here; all input observables have startWith(<val>).
 _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).combineLatest(keyStateTbl$, shipRotation$, function (_, keyStateTbl, shipRotation) {
     return { keyStateTbl: keyStateTbl, shipRotation: shipRotation };
-}).scan(_utils.transformShipCenter, {
+}).scan(_utils.transformShipPos, {
     center: {
         x: canvas.width / 2,
         y: canvas.height / 2
@@ -2244,12 +2239,9 @@ _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFra
 // point of the projectile. We also need to keep track of shipPos$ rotation prop
 // at fire, so we can continue to move the projectiles at the angle from which
 // they were fired.
-var shipFire$ =
-/*
-pilotInput$
-.filter(input => input === 'fire')
-*/
-keyStateTbl$.filter(function (table) {
+var shipFire$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).withLatestFrom(keyStateTbl$, function (_, keyStateTbl) {
+    return keyStateTbl;
+}).filter(function (table) {
     return table[_consts.CTRL_KEYCODES['fire']];
 }).map(function (tbl) {
     return tbl[_consts.CTRL_KEYCODES['fire']];
@@ -2262,7 +2254,7 @@ keyStateTbl$.filter(function (table) {
         launchNum: launchNum
     };
 }).throttle(function (launch) {
-    return _Observable.Observable.interval(300);
+    return _Observable.Observable.interval(200);
 });
 // These are player shots, a new one will be added with each emission from
 // shipFire$ and then will cease to be tracked when it strikes canvas bounds
@@ -5769,8 +5761,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.mapKeysDown = mapKeysDown;
 exports.rotateShip = rotateShip;
-exports.resolveThrust = resolveThrust;
-exports.transformShipCenter = transformShipCenter;
+exports.transformShipPos = transformShipPos;
 exports.missileMapScan = missileMapScan;
 exports.generateAsteroid = generateAsteroid;
 exports.transformAsteroids = transformAsteroids;
@@ -5784,30 +5775,9 @@ function mapKeysDown(keysDown, e) {
 function rotateShip(angle, rotation) {
     return rotation === 'rotate-left' ? angle -= Math.PI / 3 / _consts.ROTATION_INCREMENT : angle += Math.PI / 3 / _consts.ROTATION_INCREMENT;
 }
-function resolveThrust(velocity, acceleration) {
-    // if new velocity is higher than floor and less than ceiling
-    // then make velocity equal the sum of velocity and accel
-    if (velocity + acceleration >= _consts.THRUST_FLOOR && velocity + acceleration <= _consts.THRUST_CEIL) {
-        return velocity + acceleration;
-    } else if (velocity < _consts.THRUST_FLOOR && velocity + acceleration < _consts.THRUST_FLOOR) {
-        // make sure we don't decel below a given velocity
-        // while we are under floor
-        if (acceleration < 0) {
-            return velocity;
-        }
-        return velocity + acceleration;
-    } else if (velocity >= _consts.THRUST_FLOOR && velocity + acceleration < _consts.THRUST_FLOOR) {
-        return _consts.THRUST_FLOOR;
-    } else if (velocity + acceleration > _consts.THRUST_CEIL) {
-        return _consts.THRUST_CEIL;
-    }
-}
-/**
- * change this function name:
- * too close to transformShipPosition
- */
 // center transformation and rotation checks on alternate frames
-function transformShipCenter(position, movement) {
+function transformShipPos(position, movement) {
+    // suppress thrust input if we're turning:
     if (movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
         position.rotationAtThrust = movement.shipRotation;
         // if there is no accel in direction of the current angle,
@@ -5833,7 +5803,7 @@ function transformShipCenter(position, movement) {
     }).map(function (angularDisplacement) {
         // if the new ship rotation is equal to this angle and the user is
         // accelerating then we increase this velocity
-        if (movement.shipRotation * 180 / Math.PI === angularDisplacement.angle * 180 / Math.PI && movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
+        if (position.rotationAtThrust * 180 / Math.PI === angularDisplacement.angle * 180 / Math.PI && movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
             angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');
         } else {
             angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'neg');
