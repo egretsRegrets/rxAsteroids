@@ -1401,14 +1401,40 @@ var CTRL_KEYCODES = exports.CTRL_KEYCODES = {
     'rotate-right': 39,
     'fire': 32
 };
-var THRUST_ACCEL = exports.THRUST_ACCEL = .25;
-var THRUST_DECEL = exports.THRUST_DECEL = .125;
+var THRUST_ACCEL = exports.THRUST_ACCEL = .0625;
+var THRUST_DECEL = exports.THRUST_DECEL = .015625;
 var THRUST_CEIL = exports.THRUST_CEIL = 2.5;
-var THRUST_FLOOR = exports.THRUST_FLOOR = .25;
+var THRUST_FLOOR = exports.THRUST_FLOOR = .5;
 var ROTATION_INCREMENT = exports.ROTATION_INCREMENT = 4.5;
 var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
 var MISSILE_SPD = exports.MISSILE_SPD = 5;
-// 2d collection defines vertices of ship,
+/*
+export const SHIP_ANGLES = [
+    (2 * Math.PI),
+    (Math.PI / 12),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (((23 * Math.PI) / 12))
+];
+*/
+// 2d collection defines points of ship outline,
 // will be offset from pos.x && pos.y in renderShip()
 var SHIP_PATH = exports.SHIP_PATH = [
 // north point
@@ -5782,7 +5808,19 @@ function mapKeysDown(keysDown, e) {
     return keysDown;
 }
 function rotateShip(angle, rotation) {
-    return rotation === 'rotate-left' ? angle -= Math.PI / 3 / _consts.ROTATION_INCREMENT : angle += Math.PI / 3 / _consts.ROTATION_INCREMENT;
+    /*
+    if (rotation === 'rotate-left') {
+        if( angle === SHIP_ANGLES[0]){
+            return SHIP_ANGLES[SHIP_ANGLES.length - 1];
+        }
+        return SHIP_ANGLES[SHIP_ANGLES.indexOf(angle) - 1];
+    } else {
+        if( angle === SHIP_ANGLES[SHIP_ANGLES.length - 1]){
+            return SHIP_ANGLES[0];
+        }
+        return SHIP_ANGLES[SHIP_ANGLES.indexOf(angle) + 1];
+    }
+    */
 }
 function resolveThrust(velocity, acceleration) {
     // if new velocity is higher than floor and less than ceiling
@@ -5802,6 +5840,10 @@ function resolveThrust(velocity, acceleration) {
         return _consts.THRUST_CEIL;
     }
 }
+/**
+ * change this function name:
+ * too close to transformShipPosition
+ */
 // center transformation and rotation checks on alternate frames
 function transformShipCenter(position, movement) {
     if (movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
@@ -5822,16 +5864,14 @@ function transformShipCenter(position, movement) {
     if (!objInBounds(position.center, position.boundsMax)) {
         position.center = objWrapBounds(position.center, position.boundsMax);
     }
-    console.log(position.angularDisplacementTbl);
     position.angularDisplacementTbl = position.angularDisplacementTbl.filter(function (angularDisplacement) {
-        return (
-            // we have to convert both sides of the angle comparison back to degrees
-            movement.shipRotation * 180 / Math.PI === angularDisplacement.angle * 180 / Math.PI || angularDisplacement.velocity > _consts.THRUST_FLOOR
-        );
+        if (position.rotationAtThrust === angularDisplacement.angle || angularDisplacement.velocity > _consts.THRUST_FLOOR) {
+            return angularDisplacement;
+        }
     }).map(function (angularDisplacement) {
         // if the new ship rotation is equal to this angle and the user is
         // accelerating then we increase this velocity
-        if (movement.shipRotation * 180 / Math.PI === angularDisplacement.angle * 180 / Math.PI && movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
+        if (movement.shipRotation === angularDisplacement.angle && movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
             angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');
         } else {
             angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'neg');

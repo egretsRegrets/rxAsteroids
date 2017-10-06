@@ -15,18 +15,44 @@ export const CTRL_KEYCODES = {
     'fire': 32
 }
 
-export const THRUST_ACCEL = .25;
-export const THRUST_DECEL = .125;
+export const THRUST_ACCEL = .0625;
+export const THRUST_DECEL = .015625;
 export const THRUST_CEIL = 2.5;
-export const THRUST_FLOOR = .25;
+export const THRUST_FLOOR = .5;
 export const ROTATION_INCREMENT = 4.5;
 
 export const ASTEROID_SPD = 1;
 export const MISSILE_SPD = 5;
 
-// 2d collection defines vertices of ship,
+/*
+export const SHIP_ANGLES = [
+    (2 * Math.PI),
+    (Math.PI / 12),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (),
+    (((23 * Math.PI) / 12))
+];
+*/
+
+// 2d collection defines points of ship outline,
     // will be offset from pos.x && pos.y in renderShip()
- 
 export const SHIP_PATH = [
     // north point
     [0, -10],

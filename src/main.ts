@@ -34,7 +34,12 @@ import {
     transformAsteroids
 } from './utils';
 import { renderScene } from './canvas';
-import { FPS, CONTROLS, ROTATION_INCREMENT, CTRL_KEYCODES } from './consts';
+import { FPS, CONTROLS, 
+    ROTATION_INCREMENT, 
+    CTRL_KEYCODES/*,
+    SHIP_ANGLES
+    */
+ } from './consts';
 import { 
     AngularDisplacement,
     ShipPosition,

@@ -19,7 +19,9 @@ import {
     MISSILE_SPD,
     CTRL_KEYCODES,
     ASTEROID_SPD,
-    ASTEROID_RADIUS
+    ASTEROID_RADIUS/*,
+    SHIP_ANGLES
+    */
 } from './consts';
 
 export function mapKeysDown(keysDown: KeysDown, e: KeyboardEvent) {
@@ -28,9 +30,19 @@ export function mapKeysDown(keysDown: KeysDown, e: KeyboardEvent) {
 }
 
 export function rotateShip(angle, rotation) {
-    return rotation === 'rotate-left'
-    ? angle -= (Math.PI / 3) / ROTATION_INCREMENT
-    : angle += (Math.PI / 3) / ROTATION_INCREMENT;
+    /*
+    if (rotation === 'rotate-left') {
+        if( angle === SHIP_ANGLES[0]){
+            return SHIP_ANGLES[SHIP_ANGLES.length - 1];
+        }
+        return SHIP_ANGLES[SHIP_ANGLES.indexOf(angle) - 1];
+    } else {
+        if( angle === SHIP_ANGLES[SHIP_ANGLES.length - 1]){
+            return SHIP_ANGLES[0];
+        }
+        return SHIP_ANGLES[SHIP_ANGLES.indexOf(angle) + 1];
+    }
+    */
 }
 
 export function resolveThrust(velocity, acceleration) {
@@ -70,6 +82,10 @@ export function resolveThrust(velocity, acceleration) {
 
 }
 
+/**
+ * change this function name:
+ * too close to transformShipPosition
+ */
 // center transformation and rotation checks on alternate frames
 export function transformShipCenter (position: ShipPosition, movement: ShipMovement): ShipPosition {
     
@@ -97,22 +113,26 @@ export function transformShipCenter (position: ShipPosition, movement: ShipMovem
     if( !objInBounds(position.center, position.boundsMax) ){
         position.center = objWrapBounds(position.center, position.boundsMax);
     }
-    console.log(position.angularDisplacementTbl);
     position.angularDisplacementTbl = position.angularDisplacementTbl
         // filter out angleDisplacement where the velocity is === thrust floor,
             // unless that's the direction we're moving toward,
             // then we'll preserve velocity at thrust floor.
         .filter(
             (angularDisplacement: AngularDisplacement) =>
-            // we have to convert both sides of the angle comparison back to degrees
-            (movement.shipRotation * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) ||
-            angularDisplacement.velocity > THRUST_FLOOR
+            {
+                if(
+                    position.rotationAtThrust === angularDisplacement.angle ||
+                    angularDisplacement.velocity > THRUST_FLOOR
+                ){
+                    return angularDisplacement;
+                }
+            }
         )
         .map((angularDisplacement: AngularDisplacement) => {
             // if the new ship rotation is equal to this angle and the user is
                 // accelerating then we increase this velocity
             if(
-                (movement.shipRotation * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) &&
+                movement.shipRotation === angularDisplacement.angle &&
                 movement.keyStateTbl[CTRL_KEYCODES['thrust']]
             ){
                 angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');
