@@ -1403,7 +1403,7 @@ var CTRL_KEYCODES = exports.CTRL_KEYCODES = {
 };
 var THRUST_ACCEL = exports.THRUST_ACCEL = .0625;
 var THRUST_DECEL = exports.THRUST_DECEL = .0078125;
-var THRUST_CEIL = exports.THRUST_CEIL = 2.5;
+var THRUST_CEIL = exports.THRUST_CEIL = 4.5;
 var THRUST_FLOOR = exports.THRUST_FLOOR = .5;
 var ROTATION_INCREMENT = exports.ROTATION_INCREMENT = 3;
 var ASTEROID_SPD = exports.ASTEROID_SPD = 1;
@@ -5804,7 +5804,11 @@ function transformShipPos(position, movement) {
         // if the new ship rotation is equal to this angle and the user is
         // accelerating then we increase this velocity
         if (position.rotationAtThrust * 180 / Math.PI === angularDisplacement.angle * 180 / Math.PI && movement.keyStateTbl[_consts.CTRL_KEYCODES['thrust']]) {
-            angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');
+            // get the total ship velocity, for purposes of keeping under ceiling
+            var shipVelocity = position.angularDisplacementTbl.reduce(function (totalVel, angDCell) {
+                return totalVel + angDCell.velocity;
+            }, 0);
+            angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos', shipVelocity);
         } else {
             angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'neg');
         }
@@ -5979,12 +5983,19 @@ function asteroidShapeOfFour(seed) {
     }
 }
 function resolveVelocity(velocity, accelType) {
+    var totalVel = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+
     if (accelType === 'pos') {
-        // keep velocity under thrust ceiling
+        // keep this velocity at this angle from putting the whole
+        // ship velocity above the ceiling
+        if (velocity + _consts.THRUST_ACCEL + totalVel >= _consts.THRUST_CEIL) {
+            return velocity;
+        }
+        // keep velocity under thrust ceiling at this angle
         if (velocity + _consts.THRUST_ACCEL >= _consts.THRUST_CEIL) {
             return _consts.THRUST_CEIL;
         }
-        // accel by accel rate
+        // if everything's under ceiling, accel
         return velocity + _consts.THRUST_ACCEL;
     } else {
         // keep velocity above thrust floor

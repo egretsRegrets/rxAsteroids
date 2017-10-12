@@ -62,8 +62,8 @@ export function transformShipPos (position: ShipPosition, movement: ShipMovement
     }
     position.angularDisplacementTbl = position.angularDisplacementTbl
         // filter out angleDisplacement where the velocity is === thrust floor,
-            // unless that's the direction we're moving toward,
-            // then we'll preserve velocity at thrust floor.
+            // unless that's the direction we're moving toward, thus we
+            // remove any angularDisplacement cell where there is no velocity in that direction
         .filter(
             (angularDisplacement: AngularDisplacement) =>
             {
@@ -82,7 +82,11 @@ export function transformShipPos (position: ShipPosition, movement: ShipMovement
                 (position.rotationAtThrust * 180/Math.PI) === (angularDisplacement.angle * 180/Math.PI) &&
                 movement.keyStateTbl[CTRL_KEYCODES['thrust']]
             ){
-                angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos');
+                // get the total ship velocity, for purposes of keeping under ceiling
+                let shipVelocity = position.angularDisplacementTbl.reduce((totalVel, angDCell: AngularDisplacement) => 
+                    totalVel + angDCell.velocity
+                , 0);
+                angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'pos', shipVelocity);
             } else{
                 angularDisplacement.velocity = resolveVelocity(angularDisplacement.velocity, 'neg');
             }
@@ -278,13 +282,18 @@ function asteroidShapeOfFour(seed: 1 | 2 | 3 | 4) {
     }
 }
 
-function resolveVelocity(velocity: number, accelType: 'pos' | 'neg' ) {
+function resolveVelocity(velocity: number, accelType: 'pos' | 'neg', totalVel: number = null ) {
     if(accelType === 'pos'){
-        // keep velocity under thrust ceiling
+        // keep this velocity at this angle from putting the whole
+            // ship velocity above the ceiling
+        if(velocity + THRUST_ACCEL + totalVel >= THRUST_CEIL){
+            return velocity;
+        }
+        // keep velocity under thrust ceiling at this angle
         if(velocity + THRUST_ACCEL >= THRUST_CEIL){
             return THRUST_CEIL;
         }
-        // accel by accel rate
+        // if everything's under ceiling, accel
         return velocity + THRUST_ACCEL;
     } else{
         // keep velocity above thrust floor
