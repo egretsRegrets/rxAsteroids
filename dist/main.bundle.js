@@ -2271,16 +2271,6 @@ var playerProjectile$ = _Observable.Observable.interval(1000 / _consts.FPS, _ani
 // Returns a collection representing center coords for each
 // asteroid, as well as angle-of-travel and velocity for each asteroid,
 // and asteroid outline type - angle and outline type are randomly gen.
-/*
-let asteroids$: Observable<Asteroid[]> = Observable
-    .interval(1000 / FPS, animationFrame)
-    .scan(transformAsteroids, generateAsteroid(canvas))
-    // check if asteroid struck by missile
-    .withLatestFrom(playerProjectile$,
-        (asteroids, missiles) => ({asteroids, missiles})
-    )
-    .map(entities => asteroidMissileCollision(entities));
-*/
 var asteroids$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).withLatestFrom(playerProjectile$, function (_, missiles) {
     return missiles;
 }).scan(_utils.transformAsteroids, (0, _utils.generateAsteroid)(canvas));
@@ -5854,7 +5844,8 @@ function missileMapScan(mState, latestLaunch) {
                 x: latestLaunch.missileStart.x,
                 y: latestLaunch.missileStart.y
             },
-            firingAngle: latestLaunch.missileAngle
+            firingAngle: latestLaunch.missileAngle,
+            potent: true
         });
     }
     return newMState;
@@ -5886,7 +5877,7 @@ function generateAsteroid(canvas) {
     return newAsteroids;
 }
 function transformAsteroids(asteroids, missiles) {
-    asteroids = asteroidMissileCollision(asteroids, missiles);
+    asteroids = asteroidMissileCollision(asteroids, missiles).asteroids;
     return asteroids.map(function (asteroid) {
         if (!objInBounds(asteroid.center, asteroid.boundsMax)) {
             asteroid.center = objWrapBounds(asteroid.center, asteroid.boundsMax);
@@ -5901,7 +5892,7 @@ function asteroidMissileCollision(asteroids, missiles) {
     // missiles to see if a missile is in a computed cell representing
     // the asteroid's collision. We choose to use a loop inside the forEach
     // so that we can exit from the loop if I missile hits
-    return asteroids = asteroids.filter(function (asteroid) {
+    var filteredAsteroids = asteroids.filter(function (asteroid) {
         var asteroidSurvives = true;
         for (var i = 0; i < missiles.length; i++) {
             var mPos = missiles[i].pos;
@@ -5909,12 +5900,20 @@ function asteroidMissileCollision(asteroids, missiles) {
             // complex conditional to check if missile center coords is between asteroid
             // x and y axes edge coords - if the missile is within the asteroid's shape
             if (mPos.y > aCent.y - _consts.ASTEROID_RADIUS && mPos.y < aCent.y + _consts.ASTEROID_RADIUS && mPos.x > aCent.x - _consts.ASTEROID_RADIUS && mPos.x < aCent.x + _consts.ASTEROID_RADIUS) {
-                // remove asteroid, remove missile
-                return asteroidSurvives = false;
+                // we check if the missile has the potent property, this means that the
+                // missile has yet to hit an antagonist, and can still do damage
+                if (missiles[i].potent) {
+                    // remove asteroid, remove missile
+                    missiles[i].potent = false;
+                    return asteroidSurvives = false;
+                }
             }
         }
+        // we return an object that we can use to return updated missile and
+        // asteroid collections as separate properties
         return asteroidSurvives;
     });
+    return { asteroids: filteredAsteroids, missiles: missiles };
 }
 function missileTransform(missile) {
     missile.pos = {

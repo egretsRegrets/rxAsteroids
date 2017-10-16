@@ -52,6 +52,7 @@ export interface Asteroid{
 export interface Missile {
     firingAngle: number;
     pos: Point2d;
+    potent: boolean;
 }
 
 export interface MState {

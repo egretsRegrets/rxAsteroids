@@ -122,7 +122,8 @@ export function missileMapScan(mState: MState, latestLaunch: Launch): MState{
                     x: latestLaunch.missileStart.x,
                     y: latestLaunch.missileStart.y
                 },
-                firingAngle: latestLaunch.missileAngle
+                firingAngle: latestLaunch.missileAngle,
+                potent: true
             }
         );
     }
@@ -159,7 +160,7 @@ export function generateAsteroid(canvas: HTMLCanvasElement){
 }
 
 export function transformAsteroids(asteroids: Asteroid[], missiles: Missile[]){
-    asteroids = asteroidMissileCollision(asteroids, missiles);
+    asteroids = asteroidMissileCollision(asteroids, missiles).asteroids;
     return asteroids.map((asteroid: Asteroid): Asteroid => {
         if ( !objInBounds(asteroid.center, asteroid.boundsMax) ){
             asteroid.center = objWrapBounds(asteroid.center, asteroid.boundsMax);
@@ -175,7 +176,7 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
         // missiles to see if a missile is in a computed cell representing
         // the asteroid's collision. We choose to use a loop inside the forEach
         // so that we can exit from the loop if I missile hits
-    return asteroids = asteroids.filter(asteroid => {
+    let filteredAsteroids = asteroids.filter(asteroid => {
         let asteroidSurvives = true;
         for(let i = 0; i < missiles.length; i++){
             let mPos = missiles[i].pos;
@@ -186,12 +187,21 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
                 mPos.y > aCent.y - ASTEROID_RADIUS && mPos.y < aCent.y + ASTEROID_RADIUS &&
                 mPos.x > aCent.x - ASTEROID_RADIUS && mPos.x < aCent.x + ASTEROID_RADIUS 
             ){
-                // remove asteroid, remove missile
-                return asteroidSurvives = false;
+                // we check if the missile has the potent property, this means that the
+                    // missile has yet to hit an antagonist, and can still do damage
+                if (missiles[i].potent){
+                    // remove asteroid, remove missile
+                    missiles[i].potent = false;
+                    return asteroidSurvives = false;
+                }
             }
         }
+        // we return an object that we can use to return updated missile and
+            // asteroid collections as separate properties
+        
         return asteroidSurvives;
-    });    
+    });
+    return {asteroids: filteredAsteroids, missiles};    
 }
 
 function missileTransform(missile: Missile) {
