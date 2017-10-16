@@ -30,7 +30,8 @@ import {
     missileMapScan,
     mapKeysDown,
     generateAsteroid,
-    transformAsteroids
+    transformAsteroids,
+    asteroidMissileCollision
 } from './utils';
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, 
@@ -170,8 +171,20 @@ let playerProjectile$: Observable<Missile[]> = Observable
     // Returns a collection representing center coords for each
     // asteroid, as well as angle-of-travel and velocity for each asteroid,
     // and asteroid outline type - angle and outline type are randomly gen.
+/*    
 let asteroids$: Observable<Asteroid[]> = Observable
     .interval(1000 / FPS, animationFrame)
+    .scan(transformAsteroids, generateAsteroid(canvas))
+    // check if asteroid struck by missile
+    .withLatestFrom(playerProjectile$,
+        (asteroids, missiles) => ({asteroids, missiles})
+    )
+    .map(entities => asteroidMissileCollision(entities));
+*/
+
+let asteroids$: Observable<Asteroid[]> = Observable
+    .interval(1000 / FPS, animationFrame)
+    .withLatestFrom(playerProjectile$, (_, missiles) => missiles)
     .scan(transformAsteroids, generateAsteroid(canvas));
 
 // scene observable to combine all of the observables

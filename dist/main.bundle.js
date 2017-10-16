@@ -2271,7 +2271,19 @@ var playerProjectile$ = _Observable.Observable.interval(1000 / _consts.FPS, _ani
 // Returns a collection representing center coords for each
 // asteroid, as well as angle-of-travel and velocity for each asteroid,
 // and asteroid outline type - angle and outline type are randomly gen.
-var asteroids$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).scan(_utils.transformAsteroids, (0, _utils.generateAsteroid)(canvas));
+/*
+let asteroids$: Observable<Asteroid[]> = Observable
+    .interval(1000 / FPS, animationFrame)
+    .scan(transformAsteroids, generateAsteroid(canvas))
+    // check if asteroid struck by missile
+    .withLatestFrom(playerProjectile$,
+        (asteroids, missiles) => ({asteroids, missiles})
+    )
+    .map(entities => asteroidMissileCollision(entities));
+*/
+var asteroids$ = _Observable.Observable.interval(1000 / _consts.FPS, _animationFrame.animationFrame).withLatestFrom(playerProjectile$, function (_, missiles) {
+    return missiles;
+}).scan(_utils.transformAsteroids, (0, _utils.generateAsteroid)(canvas));
 // scene observable to combine all of the observables
 // we want to expose to the scene rendering game observable
 var scene$ = shipPos$.withLatestFrom(playerProjectile$, asteroids$, function (ship, missiles, asteroids) {
@@ -5765,6 +5777,7 @@ exports.transformShipPos = transformShipPos;
 exports.missileMapScan = missileMapScan;
 exports.generateAsteroid = generateAsteroid;
 exports.transformAsteroids = transformAsteroids;
+exports.asteroidMissileCollision = asteroidMissileCollision;
 
 var _consts = __webpack_require__(17);
 
@@ -5872,7 +5885,8 @@ function generateAsteroid(canvas) {
     });
     return newAsteroids;
 }
-function transformAsteroids(asteroids) {
+function transformAsteroids(asteroids, missiles) {
+    asteroids = asteroidMissileCollision(asteroids, missiles);
     return asteroids.map(function (asteroid) {
         if (!objInBounds(asteroid.center, asteroid.boundsMax)) {
             asteroid.center = objWrapBounds(asteroid.center, asteroid.boundsMax);
@@ -5880,6 +5894,26 @@ function transformAsteroids(asteroids) {
         asteroid.center.x += _consts.ASTEROID_SPD * Math.sin(asteroid.driftAngle);
         asteroid.center.y -= _consts.ASTEROID_SPD * Math.cos(asteroid.driftAngle);
         return asteroid;
+    });
+}
+function asteroidMissileCollision(asteroids, missiles) {
+    // We forEach over each asteroid, then we run a for loop through
+    // missiles to see if a missile is in a computed cell representing
+    // the asteroid's collision. We choose to use a loop inside the forEach
+    // so that we can exit from the loop if I missile hits
+    return asteroids = asteroids.filter(function (asteroid) {
+        var asteroidSurvives = true;
+        for (var i = 0; i < missiles.length; i++) {
+            var mPos = missiles[i].pos;
+            var aCent = asteroid.center;
+            // complex conditional to check if missile center coords is between asteroid
+            // x and y axes edge coords - if the missile is within the asteroid's shape
+            if (mPos.y > aCent.y - _consts.ASTEROID_RADIUS && mPos.y < aCent.y + _consts.ASTEROID_RADIUS && mPos.x > aCent.x - _consts.ASTEROID_RADIUS && mPos.x < aCent.x + _consts.ASTEROID_RADIUS) {
+                // remove asteroid, remove missile
+                return asteroidSurvives = false;
+            }
+        }
+        return asteroidSurvives;
     });
 }
 function missileTransform(missile) {

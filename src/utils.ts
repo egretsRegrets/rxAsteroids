@@ -158,7 +158,8 @@ export function generateAsteroid(canvas: HTMLCanvasElement){
     return newAsteroids;
 }
 
-export function transformAsteroids(asteroids: Asteroid[]){
+export function transformAsteroids(asteroids: Asteroid[], missiles: Missile[]){
+    asteroids = asteroidMissileCollision(asteroids, missiles);
     return asteroids.map((asteroid: Asteroid): Asteroid => {
         if ( !objInBounds(asteroid.center, asteroid.boundsMax) ){
             asteroid.center = objWrapBounds(asteroid.center, asteroid.boundsMax);
@@ -167,6 +168,30 @@ export function transformAsteroids(asteroids: Asteroid[]){
         asteroid.center.y -= ASTEROID_SPD * Math.cos(asteroid.driftAngle);
         return asteroid;
     });
+}
+
+export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missile[]) {
+    // We forEach over each asteroid, then we run a for loop through
+        // missiles to see if a missile is in a computed cell representing
+        // the asteroid's collision. We choose to use a loop inside the forEach
+        // so that we can exit from the loop if I missile hits
+    return asteroids = asteroids.filter(asteroid => {
+        let asteroidSurvives = true;
+        for(let i = 0; i < missiles.length; i++){
+            let mPos = missiles[i].pos;
+            let aCent = asteroid.center;
+            // complex conditional to check if missile center coords is between asteroid
+                // x and y axes edge coords - if the missile is within the asteroid's shape
+            if (
+                mPos.y > aCent.y - ASTEROID_RADIUS && mPos.y < aCent.y + ASTEROID_RADIUS &&
+                mPos.x > aCent.x - ASTEROID_RADIUS && mPos.x < aCent.x + ASTEROID_RADIUS 
+            ){
+                // remove asteroid, remove missile
+                return asteroidSurvives = false;
+            }
+        }
+        return asteroidSurvives;
+    });    
 }
 
 function missileTransform(missile: Missile) {
