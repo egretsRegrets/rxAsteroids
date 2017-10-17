@@ -200,8 +200,8 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
             // complex conditional to check if missile center coords is between asteroid
                 // x and y axes edge coords - if the missile is within the asteroid's shape
             if (
-                mPos.y > aCent.y - ASTEROID_RADIUS && mPos.y < aCent.y + ASTEROID_RADIUS &&
-                mPos.x > aCent.x - ASTEROID_RADIUS && mPos.x < aCent.x + ASTEROID_RADIUS 
+                mPos.y > aCent.y - (ASTEROID_RADIUS / asteroid.size) && mPos.y < aCent.y + (ASTEROID_RADIUS / asteroid.size) &&
+                mPos.x > aCent.x - (ASTEROID_RADIUS / asteroid.size) && mPos.x < aCent.x + (ASTEROID_RADIUS / asteroid.size) 
             ){
                 // we check if the missile has the potent property, this means that the
                     // missile has yet to hit an antagonist, and can still do damage
@@ -232,21 +232,44 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
     return {asteroids: asteroidCollisionRes, missiles};    
 }
 
-function fragmentAsteroid(asteroid: Asteroid) {
+function fragmentAsteroid(asteroid: Asteroid): Asteroid[] {
     let fraggedAsteroids = [];
-    const asteroidSize = asteroid.size * 2;
-    if (asteroidSize <= 4){
-       for(let i = 0; i < 2; i++){
-           fraggedAsteroids.push(
-               <Asteroid>{
-                   driftAngle: asteroidAngleOfFour(randomOfFour()),
-                   center: asteroid.center,
-                   boundsMax: asteroid.boundsMax,
-                   outlineType: asteroidShapeOfFour(randomOfFour()),
-                   size: asteroidSize
-               }
-           );
-       }
+    const fragmentSize = asteroid.size * 2;
+    if (fragmentSize <= 4){
+    // new drift contains two values - one new driftAngle for each sub asteroid
+        // each new angle is a product of the parent angle - each is the spacial
+        // opposite of the other angel.
+    const newDrift = [
+        asteroid.driftAngle - Math.PI/4,
+        asteroid.driftAngle + Math.PI/4
+    ];
+        [
+            {
+                driftAngle: newDrift[0],
+                // center is the parent's center with offset x
+                center: {
+                    x: asteroid.center.x - ((ASTEROID_RADIUS / asteroid.size) / 1.5),
+                    y: asteroid.center.y
+                },
+                boundsMax: asteroid.boundsMax,
+                outlineType: asteroidShapeOfFour(randomOfFour()),
+                size: fragmentSize
+            },
+            {
+                driftAngle: newDrift[1],
+                // center is the parent's center with offset x
+                center: {
+                    x: asteroid.center.x + ((ASTEROID_RADIUS / asteroid.size) / 1.5),
+                    y: asteroid.center.y
+                },
+                boundsMax: asteroid.boundsMax,
+                outlineType: asteroidShapeOfFour(randomOfFour()),
+                size: fragmentSize
+            }
+        ].forEach(newAsteroid => {
+            console.log(newAsteroid);
+            fraggedAsteroids.push(newAsteroid);
+        });
     } 
     return fraggedAsteroids;
 }

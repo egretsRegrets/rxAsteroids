@@ -19,9 +19,9 @@ export const THRUST_ACCEL = .0625;
 export const THRUST_DECEL = .0078125;
 export const THRUST_CEIL = 4.5;
 export const THRUST_FLOOR = .5;
-export const ROTATION_INCREMENT = 3;
+export const ROTATION_INCREMENT = 8;
 
-export const ASTEROID_SPD = 1;
+export const ASTEROID_SPD = 1.5;
 export const MISSILE_SPD = 12;
 
 // 2d collection defines points of ship outline,
