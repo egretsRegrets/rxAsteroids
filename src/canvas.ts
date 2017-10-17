@@ -83,19 +83,19 @@ function renderAsteroids(ctx: CanvasRenderingContext2D, asteroids: Asteroid[]) {
         ctx.translate(asteroid.center.x, asteroid.center.y);
         ctx.strokeStyle = THEME_COLORS.ship_asteroid_stroke;
         ctx.beginPath();
-        drawAsteroidOutline(ctx, asteroid.outlineType);
+        drawAsteroidOutline(ctx, asteroid.outlineType, asteroid.size);
         ctx.closePath();
         ctx.stroke();
         ctx.restore();
     });
 }
 
-function drawAsteroidOutline(ctx: CanvasRenderingContext2D, outlineType) {
+function drawAsteroidOutline(ctx: CanvasRenderingContext2D, outlineType, pathDivisor) {
     ASTEROID_OUTLINE_PATHS[outlineType].forEach((coordSet, index) => {
         if(index === 0){
-            ctx.moveTo(coordSet[0], coordSet[1]);
+            ctx.moveTo(coordSet[0] / pathDivisor, coordSet[1] / pathDivisor);
         } else {
-            ctx.lineTo(coordSet[0], coordSet[1]);
+            ctx.lineTo(coordSet[0] / pathDivisor, coordSet[1] / pathDivisor);
         }
     });
 }
