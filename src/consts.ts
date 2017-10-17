@@ -16,7 +16,7 @@ export const CTRL_KEYCODES = {
 }
 
 export const THRUST_ACCEL = .0625;
-export const THRUST_DECEL = .0078125;
+export const THRUST_DECEL = .001953125;
 export const THRUST_CEIL = 4.5;
 export const THRUST_FLOOR = .5;
 export const ROTATION_INCREMENT = 8;
