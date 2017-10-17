@@ -47,6 +47,8 @@ export interface Asteroid{
     center: Point2d;
     boundsMax: Point2d;
     outlineType: 'A' | 'B' | 'C' | 'D';
+    // an asteroid is either 1 of the largest asteroid, 1/2 or 1/4
+    size: 1 | 2 | 4;
 }
 
 export interface Missile {
@@ -64,4 +66,9 @@ export interface MState {
 export interface AngularDisplacement {
     angle: number;
     velocity: number;
+}
+
+export interface ProjectileEntities {
+    asteroids: Asteroid[],
+    missiles: Missile[]
 }

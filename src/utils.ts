@@ -8,7 +8,8 @@ import {
     Missile,
     MState,
     KeysDown,
-    Asteroid
+    Asteroid,
+    ProjectileEntities
 } from './interfaces';
 import {
     ROTATION_INCREMENT,
@@ -133,7 +134,7 @@ export function missileMapScan(mState: MState, latestLaunch: Launch): MState{
 // generate 4 starting asteroids:
     // we need to generate center coords for each asteroid
     // as well as angle of drift for each asteroid
-export function generateAsteroid(canvas: HTMLCanvasElement){
+export function generateSeedProjectiles(canvas: HTMLCanvasElement){
     //let asteroids = Array<Asteroid>(4);
     let asteroids: Asteroid[] = [
         <Asteroid>{}, <Asteroid>{}, <Asteroid>{}, <Asteroid>{}
@@ -154,14 +155,26 @@ export function generateAsteroid(canvas: HTMLCanvasElement){
         // we'll have four different asteroid outline shapes,
             // so assign a random outline type
         asteroid.outlineType = asteroidShapeOfFour(randomOfFour());
+        asteroid.size = 1;
         return asteroid;
     });
-    return newAsteroids;
+    return {
+        asteroids: newAsteroids,
+        missiles: <Missile[]>[
+            {
+                firingAngle: 0,
+                pos: {x: 0, y: 0},
+                potent: false
+            }
+        ]
+    };
 }
 
-export function transformAsteroids(asteroids: Asteroid[], missiles: Missile[]){
-    asteroids = asteroidMissileCollision(asteroids, missiles).asteroids;
-    return asteroids.map((asteroid: Asteroid): Asteroid => {
+export function transformEntities(entities: ProjectileEntities, missiles: Missile[]){
+    // collisionFilteredEntities gives us the return object from the collision checks
+        // collections of filtered projectiles are stored as two props - .missiles and .asteroids
+    let collisionFilteredEntities = asteroidMissileCollision(entities.asteroids, missiles);
+    let transformedAsteroids = collisionFilteredEntities.asteroids.map((asteroid: Asteroid): Asteroid => {
         if ( !objInBounds(asteroid.center, asteroid.boundsMax) ){
             asteroid.center = objWrapBounds(asteroid.center, asteroid.boundsMax);
         }
@@ -169,6 +182,8 @@ export function transformAsteroids(asteroids: Asteroid[], missiles: Missile[]){
         asteroid.center.y -= ASTEROID_SPD * Math.cos(asteroid.driftAngle);
         return asteroid;
     });
+    // return the result entities
+    return {asteroids: transformedAsteroids, missiles: collisionFilteredEntities.missiles};
 }
 
 export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missile[]) {
@@ -176,8 +191,9 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
         // missiles to see if a missile is in a computed cell representing
         // the asteroid's collision. We choose to use a loop inside the forEach
         // so that we can exit from the loop if I missile hits
-    let filteredAsteroids = asteroids.filter(asteroid => {
-        let asteroidSurvives = true;
+    let asteroidCollisionRes = <Asteroid[]>[];
+    asteroids.forEach(asteroid => {
+        let collision = false;
         for(let i = 0; i < missiles.length; i++){
             let mPos = missiles[i].pos;
             let aCent = asteroid.center;
@@ -190,18 +206,49 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
                 // we check if the missile has the potent property, this means that the
                     // missile has yet to hit an antagonist, and can still do damage
                 if (missiles[i].potent){
-                    // remove asteroid, remove missile
+                    // setting the colliding missiles potent value to false means
+                        // it won't be rendered and it will not be considered in collision logic
                     missiles[i].potent = false;
-                    return asteroidSurvives = false;
+                    // collision has occurred, short circuit on that new value
+                    collision = true;
                 }
             }
+            
         }
-        // we return an object that we can use to return updated missile and
-            // asteroid collections as separate properties
-        
-        return asteroidSurvives;
+        if (!collision){
+            asteroidCollisionRes.push(asteroid);
+        } else {
+            // use fragmentAsteroid to produce new asteroids of smaller size
+            let fraggedAsteroids = fragmentAsteroid(asteroid);
+            if (fraggedAsteroids.length){
+                fraggedAsteroids.forEach(asteroid => asteroidCollisionRes.push(asteroid));
+            }
+            // here we don't push any asteroid because the asteroid hit has reached its smallest size
+                // and so it is just removed from the collection
+        }
     });
-    return {asteroids: filteredAsteroids, missiles};    
+    // we return an object that we can use to return updated missile and
+            // asteroid collections as separate properties
+    return {asteroids: asteroidCollisionRes, missiles};    
+}
+
+function fragmentAsteroid(asteroid: Asteroid) {
+    let fraggedAsteroids = [];
+    const asteroidSize = asteroid.size * 2;
+    if (asteroidSize <= 4){
+       for(let i = 0; i < 2; i++){
+           fraggedAsteroids.push(
+               <Asteroid>{
+                   driftAngle: asteroidAngleOfFour(randomOfFour()),
+                   center: asteroid.center,
+                   boundsMax: asteroid.boundsMax,
+                   outlineType: asteroidShapeOfFour(randomOfFour()),
+                   size: asteroidSize
+               }
+           );
+       }
+    } 
+    return fraggedAsteroids;
 }
 
 function missileTransform(missile: Missile) {

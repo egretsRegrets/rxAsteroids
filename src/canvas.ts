@@ -62,16 +62,18 @@ function renderShip(ctx: CanvasRenderingContext2D, ship) {
 
 function renderMissiles(ctx: CanvasRenderingContext2D, missiles: Missile[]) {
     missiles.forEach(missile => {
-        ctx.save();
-        ctx.translate(missile.pos.x, missile.pos.y);
-        ctx.rotate(missile.firingAngle);
-        ctx.strokeStyle = THEME_COLORS.missile_color;
-        ctx.beginPath();
-        // starting point of projectile line
-        ctx.moveTo(0, -16);
-        ctx.lineTo(0, -24);
-        ctx.stroke();
-        ctx.restore();
+        if (missile.potent){
+            ctx.save();
+            ctx.translate(missile.pos.x, missile.pos.y);
+            ctx.rotate(missile.firingAngle);
+            ctx.strokeStyle = THEME_COLORS.missile_color;
+            ctx.beginPath();
+            // starting point of projectile line
+            ctx.moveTo(0, -16);
+            ctx.lineTo(0, -24);
+            ctx.stroke();
+            ctx.restore();
+        }
     });
 }
 

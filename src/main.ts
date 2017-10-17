@@ -29,8 +29,8 @@ import {
     transformShipPos,
     missileMapScan,
     mapKeysDown,
-    generateAsteroid,
-    transformAsteroids,
+    generateSeedProjectiles,
+    transformEntities,
     asteroidMissileCollision
 } from './utils';
 import { renderScene } from './canvas';
@@ -49,7 +49,8 @@ import {
     Missile,
     MState,
     KeysDown,
-    Asteroid
+    Asteroid,
+    ProjectileEntities
 } from './interfaces';
 
 // create, append canvas
@@ -146,12 +147,24 @@ let shipFire$: Observable<Launch> = Observable
             launchNum
         })
     )
-    .throttle(launch => Observable.interval(200));
+    .throttle(launch => Observable.interval(200))
+    .startWith(
+        {
+            missileStart: null,
+            missileAngle: null,
+            launchNum: 0
+        }
+    );
 
-// These are player shots, a new one will be added with each emission from
-    // shipFire$ and then will cease to be tracked when it strikes canvas bounds
-let playerProjectile$: Observable<Missile[]> = Observable
-    .interval( 1000 / FPS, animationFrame )
+// projectileEntities is our big fat bottle neck observable
+    // it's messy but it returns an object of type ProjectileEntity that contains
+    // the info we use to render asteroids and missiles. 
+    // Internally it does a great deal of work. It uses the launch output of
+    // shipFire$ to create missiles; it also generates asteroids and hands both
+    // asteroids and missiles off to functions that test for collisions and transforms
+    // these projectile types accordingly.
+let projectileEntities$: Observable<ProjectileEntities> = Observable
+    .interval(1000 / FPS, animationFrame)
     .withLatestFrom(shipFire$, (_, shipFires: Launch) => shipFires)
     // We return a collection of missiles at every frame. missileMapScan
         // filters the collection to those still in the canvas bounds, and
@@ -164,17 +177,10 @@ let playerProjectile$: Observable<Missile[]> = Observable
     })
     // only emit the missiles collection
     .map(missileState => missileState.missiles)
-    .startWith([]);
-
-
- // Asteroids$ observable to model antagonist asteroids.
-    // Returns a collection representing center coords for each
-    // asteroid, as well as angle-of-travel and velocity for each asteroid,
-    // and asteroid outline type - angle and outline type are randomly gen.
-let asteroids$: Observable<Asteroid[]> = Observable
-    .interval(1000 / FPS, animationFrame)
-    .withLatestFrom(playerProjectile$, (_, missiles) => missiles)
-    .scan(transformAsteroids, generateAsteroid(canvas));
+    .scan(
+        (entities, missiles) => transformEntities(entities, missiles),
+        generateSeedProjectiles(canvas)
+    );
 
 // scene observable to combine all of the observables
     // we want to expose to the scene rendering game observable
@@ -183,11 +189,11 @@ let scene$: Observable<Scene> = shipPos$
     // need to merge with other observables - asteroids, score
         // and produce object w/ prop for each observe
     .withLatestFrom(
-        playerProjectile$, asteroids$,
-        (ship: ShipPosition, missiles: Missile[], asteroids: Asteroid[]) => (<Scene>{
+        projectileEntities$,
+        (ship: ShipPosition, projectiles: ProjectileEntities) => (<Scene>{
             ship,
-            missiles,
-            asteroids
+            missiles: projectiles.missiles,
+            asteroids: projectiles.asteroids
         })
     );
 

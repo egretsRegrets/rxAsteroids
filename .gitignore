@@ -9,3 +9,6 @@ node_modules/
 .DS_Store?
 ._*
 
+# bundle #
+######################
+dist/main.bundle.js
