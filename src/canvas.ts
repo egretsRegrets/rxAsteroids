@@ -21,12 +21,14 @@ const THEME_COLORS = {
 
 export function renderScene(canvas, ctx, scene: Scene) {
     renderBackground(canvas, ctx);
+    // now we check that we are not in a gameOver state
     if(!scene.gameOver){
         renderShip(ctx, scene.ship);
         renderMissiles(ctx, scene.missiles);
         renderAsteroids(ctx, scene.asteroids);
         return;
     }
+    // what to render if we are in gameOver: notice that we keep asteroids and even missiles going.
     renderMissiles(ctx, scene.missiles);
     renderAsteroids(ctx, scene.asteroids);
     renderGameOver(canvas, ctx);
