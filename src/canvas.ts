@@ -28,8 +28,7 @@ export function renderScene(canvas, ctx, scene: Scene) {
         renderAsteroids(ctx, scene.asteroids);
         return;
     }
-    // what to render if we are in gameOver: notice that we keep asteroids and even missiles going.
-    renderMissiles(ctx, scene.missiles);
+    // what to render if we are in gameOver
     renderAsteroids(ctx, scene.asteroids);
     renderGameOver(canvas, ctx);
 }
