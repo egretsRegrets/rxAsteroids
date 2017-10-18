@@ -196,12 +196,10 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
         let collision = false;
         for(let i = 0; i < missiles.length; i++){
             let mPos = missiles[i].pos;
-            let aCent = asteroid.center;
             // complex conditional to check if missile center coords is between asteroid
                 // x and y axes edge coords - if the missile is within the asteroid's shape
             if (
-                mPos.y > aCent.y - (ASTEROID_RADIUS / asteroid.size) && mPos.y < aCent.y + (ASTEROID_RADIUS / asteroid.size) &&
-                mPos.x > aCent.x - (ASTEROID_RADIUS / asteroid.size) && mPos.x < aCent.x + (ASTEROID_RADIUS / asteroid.size) 
+                asteroidHit(asteroid, mPos)
             ){
                 // we check if the missile has the potent property, this means that the
                     // missile has yet to hit an antagonist, and can still do damage
@@ -230,6 +228,21 @@ export function asteroidMissileCollision(asteroids: Asteroid[], missiles: Missil
     // we return an object that we can use to return updated missile and
             // asteroid collections as separate properties
     return {asteroids: asteroidCollisionRes, missiles};    
+}
+
+export function shipCollision(gameOvers, entities: {ship: ShipPosition, projectiles: ProjectileEntities}) {
+    // the last gameOver output is true, than continue to return true: we're still in gameOver state
+    if (gameOvers){
+        return true;
+    }
+    // check if ship is in an asteroid collision geometry and return boolean depending
+    const asteroids = entities.projectiles.asteroids;
+    for(let i = 0; i < asteroids.length; i++){
+        if (asteroidHit(asteroids[i], entities.ship.center)){
+            return true;
+        }
+    }
+    return false;
 }
 
 function fragmentAsteroid(asteroid: Asteroid): Asteroid[] {
@@ -385,6 +398,16 @@ function asteroidShapeOfFour(seed: 1 | 2 | 3 | 4) {
         // 315deg to rad
         return 'D';
     }
+}
+
+function asteroidHit(asteroid: Asteroid, other) {
+    if(
+        other.y > asteroid.center.y - (ASTEROID_RADIUS / asteroid.size) && other.y < asteroid.center.y + (ASTEROID_RADIUS / asteroid.size) &&
+        other.x > asteroid.center.x - (ASTEROID_RADIUS / asteroid.size) && other.x < asteroid.center.x + (ASTEROID_RADIUS / asteroid.size)
+    ) {
+        return true;
+    }
+    return false;
 }
 
 function resolveVelocity(velocity: number, accelType: 'pos' | 'neg', totalVel: number = null ) {

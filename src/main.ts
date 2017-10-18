@@ -31,7 +31,8 @@ import {
     mapKeysDown,
     generateSeedProjectiles,
     transformEntities,
-    asteroidMissileCollision
+    asteroidMissileCollision,
+    shipCollision
 } from './utils';
 import { renderScene } from './canvas';
 import { FPS, CONTROLS, 
@@ -182,18 +183,27 @@ let projectileEntities$: Observable<ProjectileEntities> = Observable
         generateSeedProjectiles(canvas)
     );
 
+// gameOver$, pretty straight forward - collision check on shipPos$ output.center.
+    // If the collision check returns true, that val will cause game over to render
+let gameOver$: Observable<boolean> = shipPos$
+    .withLatestFrom(
+        projectileEntities$,
+        (ship, projectiles) => ({ship, projectiles})
+    )
+    .scan(shipCollision, false);
+
 // scene observable to combine all of the observables
     // we want to expose to the scene rendering game observable
- 
 let scene$: Observable<Scene> = shipPos$
     // need to merge with other observables - asteroids, score
         // and produce object w/ prop for each observe
     .withLatestFrom(
-        projectileEntities$,
-        (ship: ShipPosition, projectiles: ProjectileEntities) => (<Scene>{
+        projectileEntities$, gameOver$,
+        (ship: ShipPosition, projectiles: ProjectileEntities, gameOver) => (<Scene>{
             ship,
             missiles: projectiles.missiles,
-            asteroids: projectiles.asteroids
+            asteroids: projectiles.asteroids,
+            gameOver
         })
     );
 
@@ -211,7 +221,8 @@ let game$ = Observable
                 center: scene.ship.center
             },
             missiles: scene.missiles,
-            asteroids: scene.asteroids
+            asteroids: scene.asteroids,
+            gameOver: scene.gameOver
         }
     )
     ).subscribe({

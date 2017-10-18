@@ -21,9 +21,15 @@ const THEME_COLORS = {
 
 export function renderScene(canvas, ctx, scene: Scene) {
     renderBackground(canvas, ctx);
-    renderShip(ctx, scene.ship);
+    if(!scene.gameOver){
+        renderShip(ctx, scene.ship);
+        renderMissiles(ctx, scene.missiles);
+        renderAsteroids(ctx, scene.asteroids);
+        return;
+    }
     renderMissiles(ctx, scene.missiles);
     renderAsteroids(ctx, scene.asteroids);
+    renderGameOver(canvas, ctx);
 }
 
 function renderBackground(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
@@ -98,6 +104,18 @@ function drawAsteroidOutline(ctx: CanvasRenderingContext2D, outlineType, pathDiv
             ctx.lineTo(coordSet[0] / pathDivisor, coordSet[1] / pathDivisor);
         }
     });
+}
+
+function renderGameOver(canvas, ctx) {
+    /*
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    */
+
+    let textX = canvas.width / 2;
+    let textY = canvas.height / 2;
+
+    drawText(ctx, 'GAME OVER!', textX, textY, THEME_COLORS.ship_asteroid_stroke, 25);
 }
 
 function drawText(

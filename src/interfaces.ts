@@ -33,7 +33,8 @@ export interface ShipPosition {
 export interface Scene {
     ship: {center: Point2d, rotation: number},
     missiles: Missile[],
-    asteroids: Asteroid[]
+    asteroids: Asteroid[],
+    gameOver: any
 }
 
 export interface Launch {
